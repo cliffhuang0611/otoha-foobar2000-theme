@@ -25,7 +25,7 @@
 // the key is `features`, not `options` -- without features.drag_n_drop the panel is never
 // registered as an OLE drop target, so no on_drag_* fires
 window.DefineScript('Verdant', { author:'superziper', version:'1.2.0', features:{ drag_n_drop:true, grab_focus:true } });
-var DLGC_WANTALLKEYS=0x0004;   // capture ALL keys; applied only in Search view (see applyKeyMode)
+var DLGC_WANTALLKEYS=0x0004;   // capture Ctrl+F and text editing from every view (see applyKeyMode)
 
 /* ---- load order ------------------------------------------------------------
    Only three edges here are load-time rather than call-time, and they are the
@@ -46,6 +46,7 @@ include('core/jobs.js');
 include('data/art.js');
 include('data/library.js');
 include('data/playback.js');
+include('data/audio_options.js');
 include('data/lyrics.js');
 include('data/replaygain.js');
 include('data/dedupe.js');
@@ -59,6 +60,7 @@ include('views/nav.js');
 include('views/playlist.js');
 include('views/home.js');
 include('views/artist.js');
+include('views/album.js');
 include('views/songs.js');
 include('views/search.js');
 include('views/queue.js');

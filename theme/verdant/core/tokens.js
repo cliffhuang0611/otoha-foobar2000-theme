@@ -16,7 +16,7 @@ var COL = {
   rowHover:RGBA(255,255,255,18), rowActive:RGBA(255,255,255,38),
   line:RGBA(255,255,255,28), seekbg:RGB(77,77,77)
 };
-var M = { pad:8, gap:8, navW:230, queueW:400, barH:96, navTopH:84, rowH:56, radius:10, cpad:24, headH:280, artSz:200 };   // navW/queueW: sidebar + queue widths
+var M = { pad:8, gap:8, navW:190, queueW:240, barH:96, navTopH:84, rowH:56, radius:10, cpad:24, headH:280, artSz:200 };   // navW/queueW: sidebar + queue widths
 var PALETTE=[RGB(83,62,140),RGB(30,120,110),RGB(150,64,92),RGB(43,92,160),RGB(120,92,44),RGB(58,120,64),RGB(140,80,120),RGB(52,100,150),RGB(96,72,52),RGB(70,70,96)];
 
 /* ------------------------- fonts (create once) -------------------------
@@ -45,6 +45,7 @@ function chr(c){ return String.fromCharCode(c); }
 var GLYPH = {
   play:chr(0xE768), pause:chr(0xE769), prev:chr(0xE892), next:chr(0xE893),
   shuffle:chr(0xE8B1), repeat:chr(0xE8EE), repeat1:chr(0xE8ED), volume:chr(0xE767),
+  headphones:chr(0xE7F6), equalizer:chr(0xE9E9), audioSettings:chr(0xE9E9),
   search:chr(0xE721), home:chr(0xE80F), add:chr(0xE710), more:chr(0xE712), clock:chr(0xE823),
   cmin:chr(0xE921), cmax:chr(0xE922), crestore:chr(0xE923), cclose:chr(0xE8BB)
 };
@@ -66,6 +67,13 @@ function lineH(gr,f){
 var fitY=0, fitH=0;
 function fitV(gr,f,y,h){ var n=lineH(gr,f); if(n>h){ fitY=y-((n-h)>>1); fitH=n; } else { fitY=y; fitH=h; } }
 function tL(gr,s,f,c,x,y,w,h){ fitV(gr,f,y,h); gr.GdiDrawText(s,f,c,x,fitY,w,fitH,DT_L); }
+var TITLE_FIT_SIZES=[52,46,40,36,32,28,24,22,20,18,16,14,12];
+var TITLE_FIT_FONTS=null;
+function fitHeaderFont(gr,text,width){
+  if(!TITLE_FIT_FONTS){ TITLE_FIT_FONTS=[]; for(var i=0;i<TITLE_FIT_SIZES.length;i++) TITLE_FIT_FONTS.push(F(TITLE_FIT_SIZES[i],1)); }
+  for(var j=0;j<TITLE_FIT_FONTS.length;j++) if(gr.CalcTextWidth(text,TITLE_FIT_FONTS[j])<=width) return TITLE_FIT_FONTS[j];
+  return TITLE_FIT_FONTS[TITLE_FIT_FONTS.length-1];
+}
 function tR(gr,s,f,c,x,y,w,h){ fitV(gr,f,y,h); gr.GdiDrawText(s,f,c,x,fitY,w,fitH,DT_R); }
 function tC(gr,s,f,c,x,y,w,h){ fitV(gr,f,y,h); gr.GdiDrawText(s,f,c,x,fitY,w,fitH,DT_C); }
 function tCE(gr,s,f,c,x,y,w,h){ fitV(gr,f,y,h); gr.GdiDrawText(s,f,c,x,fitY,w,fitH,DT_C|0x8000); }   // centered, ellipsized
@@ -81,14 +89,18 @@ var ICONS={
  repeat1:"<path d='M13 15V9h-1l-2 1v1h1.5v4zm4-8v3l4-4-4-4v3H5v6h2V7zm0 10H7v-3l-4 4 4 4v-3h12v-6h-2z'/>",
  volume:"<path d='M3 9v6h4l5 5V4L7 9zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'/>",
  home:"<path d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/>",
- search:"<path d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0A4.5 4.5 0 1 1 14 9.5 4.49 4.49 0 0 1 9.5 14z'/>",
+  headphones:"<path d='M12 2a9 9 0 0 0-9 9v7a3 3 0 0 0 3 3h3v-9H5v-1a7 7 0 0 1 14 0v1h-4v9h3a3 3 0 0 0 3-3v-7a9 9 0 0 0-9-9z'/>",
+  search:"<path d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0A4.5 4.5 0 1 1 14 9.5 4.49 4.49 0 0 1 9.5 14z'/>",
  add:"<path d='M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z'/>",
  more:"<path d='M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'/>",
  clock:"<path d='M11.99 2A10 10 0 1 0 22 12 10 10 0 0 0 11.99 2zM12 20a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z'/>",
+ panelOpen:"<path d='M3 5h18v2H3zm0 12h18v2H3zm0-10h2v10H3zm16 0h2v10h-2zM8 11h5V8l4 4-4 4v-3H8z'/>",
+ panelClose:"<path d='M3 5h18v2H3zm0 12h18v2H3zm0-10h2v10H3zm16 0h2v10h-2zM16 11h-5V8l-4 4 4 4v-3h5z'/>",
  expand:"<path d='M7 14H5v5h5v-2H7zm-2-4h2V7h3V5H5zm12 7h-3v2h5v-5h-2zM14 5v2h3v3h2V5z'/>",
  compress:"<path d='M5 16h3v3h2v-5H5zm3-8H5v2h5V5H8zm6 11h2v-3h3v-2h-5zm2-11V5h-2v5h5V8z'/>",
  mic:"<path d='M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z'/>",
  equalizer:"<path d='M10 20h4V4h-4zm-6 0h4v-8H4zm12-11v11h4V9z'/>",
+ audioSettings:"<path d='M4 7h9v2H4zm13 0h3v2h-3zM4 15h3v2H4zm7 0h9v2h-9z'/><circle cx='15' cy='8' r='2.7'/><circle cx='9' cy='16' r='2.7'/>",
  chevron:"<path d='M7 10l5 5 5-5z'/>",
  sortAsc:"<path d='M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z'/>",
  sortDesc:"<path d='M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.59-5.58L4 12l8 8 8-8z'/>"

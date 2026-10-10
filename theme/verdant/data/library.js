@@ -78,19 +78,24 @@ function artistCover(name,fallback){
 // false while the scan can still move the choice: baking a card now would freeze its placeholder
 function artistCoverReady(name,fallback){ return coverPick('ar|'+name,artistCands(name,fallback),1).done; }
 function loadArtist(name){
-  viewArtist=name; artScroll=0; artistAlbums=[];
+  viewArtist=name; artScroll=0; artistRowStart=0; artistAlbums=[];
   var lib=libItems();
   if(!lib || !lib.Count) return;
   var arts=libTF('artistName'), albs=libTF('album'),
-      titles=libTF('title'), lens=libTF('len'), yrs=libTF('year');
+      titles=libTF('title'), lens=libTF('len'), yrs=libTF('year'), nums=libTF('trackno'), discs=libTF('discno');
   var map={}, order=[];
   for(var i=0;i<arts.length;i++){
     if(arts[i]!==name) continue;
     var al=albs[i]||'Unknown Album';
     if(!map[al]){ map[al]={album:al, handle:lib[i], year:yrs[i], tracks:[]}; order.push(al); }
-    map[al].tracks.push({title:titles[i], dur:lens[i], handle:lib[i]});
+    map[al].tracks.push({title:titles[i], dur:lens[i], handle:lib[i], trackNo:parseTagNumber(nums[i]), discNo:parseTagNumber(discs[i]), ordinal:i});
   }
-  for(var j=0;j<order.length;j++) artistAlbums.push(map[order[j]]);
+  for(var j=0;j<order.length;j++){
+    var album=map[order[j]];
+    album.tracks.sort(albumTrackCompare);
+    album.display=albumDisplayRows(album.tracks);
+    artistAlbums.push(album);
+  }
 }
 
 /* ---- "All Songs" library view: one index of every library track (built once, invalidated by
@@ -119,14 +124,14 @@ function getSongsIdx(){
   if(lib && lib.Count){
     var ti=libTF('title'), ar=libTF('artist'), aa=libTF('artistName'),
         al=libTF('album'), ln=libTF('len'), ls=libTF('lensec'),
-        ak=libTF('albkey'), tn=libTF('trackno'), yr=libTF('year');
+        ak=libTF('albkey'), tn=libTF('trackno'), dn=libTF('discno'), yr=libTF('year');
     for(var i=0;i<ti.length;i++){
       songsTotalSec+=parseInt(ls[i],10)||0;
       var eT=ti[i]||'', eR=ar[i]||'', eA=aa[i]||'Unknown Artist', eL=al[i]||'Unknown Album';
       // sort keys are lowercased once here instead of on every comparison inside cmpStr; a sort
       // does n*log(n) comparisons, so doing it per-comparison scales as badly as the sort itself
       out.push({h:lib[i], title:eT, artist:eR, aartist:eA,
-                album:eL, len:ln[i], artkey:ak[i], year:yr[i]||'', tn:parseInt(tn[i],10)||0,
+                album:eL, len:ln[i], artkey:ak[i], year:yr[i]||'', tn:parseTagNumber(tn[i]),dn:parseTagNumber(dn[i]),
                 kT:eT.toLowerCase(), kR:eR.toLowerCase(), kA:eA.toLowerCase(), kL:eL.toLowerCase()});
     }
   }
@@ -135,7 +140,7 @@ function getSongsIdx(){
 /* Build steps for the All Songs view. The nine title-formatting passes are the bulk of the work
    and each is atomic, so they run one per tick rather than back to back; libTF memoises them, so
    getSongsIdx then finds everything cached and only has to assemble. */
-var SONGS_FIELDS=['title','artist','artistName','album','len','lensec','albkey','trackno','year'];
+var SONGS_FIELDS=['title','artist','artistName','album','len','lensec','albkey','trackno','discno','year'];
 function songsSteps(){
   var steps=[], i;
   for(i=0;i<SONGS_FIELDS.length;i++) steps.push((function(f){ return function(){ libTF(f); }; })(SONGS_FIELDS[i]));
@@ -147,9 +152,13 @@ function songsSteps(){
 function songsReady(){ return !!songsRows; }
 function cmpStr(a,b){ a=String(a).toLowerCase(); b=String(b).toLowerCase(); return a<b?-1:(a>b?1:0); }
 function cmpK(a,b){ return a<b?-1:(a>b?1:0); }   // operands already lowercased once at index time
-function cmpTrk(a,b){ return (a.tn-b.tn)||cmpStr(a.title,b.title); }   // within an album: disc order, then title
+function cmpTrk(a,b){
+  var ad=a.dn||2147483647,bd=b.dn||2147483647,at=a.tn||2147483647,bt=b.tn||2147483647;
+  return (ad-bd)||(at-bt)||cmpStr(a.title,b.title);
+}   // within an album: DISCNUMBER, TRACKNUMBER, then title
 function buildSongsRows(){
   var idx=getSongsIdx().slice(0), g=songsGroup, rows=[], tracks=[], i;
+  if(inlineFilterActive() && filterQuery.trim()) idx=idx.filter(function(t){return fuzzyTrackMatch(filterQuery,[t.title,t.artist,t.aartist,t.album]);});
   // compares the lowercase keys precomputed in getSongsIdx -- identical ordering to cmpStr, but
   // without re-lowercasing both operands on every one of the n*log(n) comparisons
   if(g==='artist')     idx.sort(function(a,b){ return cmpK(a.kA,b.kA)||cmpK(a.kL,b.kL)||cmpTrk(a,b); });
@@ -175,8 +184,13 @@ function buildSongsRows(){
     if(ref1) ref1.count++;
     if(ref2) ref2.count++;
   }
-  var yy=0;
-  for(i=0;i<rows.length;i++){ rows[i].y=yy; yy+=rows[i].h; }
+  var yy=0, songPositions=[];
+  for(i=0;i<rows.length;i++){
+    rows[i].y=yy;
+    if(rows[i].k==='t')songPositions[rows[i].ti]=yy;
+    yy+=rows[i].h;
+  }
+  songsTrackY=songPositions;
   // link each row to its top-level header + record where the group ends, so the connector
   // rail still draws once the header itself has scrolled off the top
   var last=-1;
@@ -194,7 +208,7 @@ function songsFirstAt(py){
   return res;
 }
 function setSongsGroup(g){
-  if(g!==songsGroup){ songsGroup=g; songsRows=null; songsScroll=songsScrollT=0; }
+  if(g!==songsGroup){ clearTrackSelection(); songsGroup=g; songsRows=null; songsScroll=songsScrollT=0; }
   sgMenuOpen=false; repaintAll();
 }
 function playSongsRow(ti){
@@ -210,7 +224,7 @@ function getMeta(pi){
     var list=getItems(pi), secs=TF.lensec.EvalWithMetadbs(list), tot=0;
     for(var i=0;i<secs.length;i++) tot+=parseInt(secs[i],10)||0;
     plMetaMap[pi]={ title:TF.title.EvalWithMetadbs(list), artist:TF.artist.EvalWithMetadbs(list),
-                    album:TF.album.EvalWithMetadbs(list), len:TF.len.EvalWithMetadbs(list), artkey:TF.albkey.EvalWithMetadbs(list),
+                    album:TF.album.EvalWithMetadbs(list), albumArtist:TF.artistName.EvalWithMetadbs(list), len:TF.len.EvalWithMetadbs(list), artkey:TF.albkey.EvalWithMetadbs(list),
                     totalSec:tot, keys:null };
   }
   return plMetaMap[pi];
@@ -220,12 +234,13 @@ function getMeta(pi){
    one per tick instead. plMetaMap is only published once every field is in, so a synchronous
    getMeta() elsewhere still sees either nothing or a complete record, never a half-built one. */
 function metaSteps(pi){
-  var list=null, m={title:null,artist:null,album:null,len:null,artkey:null,totalSec:0,keys:null};
+  var list=null, m={title:null,artist:null,album:null,albumArtist:null,len:null,artkey:null,totalSec:0,keys:null};
   return [
     function(){ list=getItems(pi); },
     function(){ m.title=TF.title.EvalWithMetadbs(list); },
     function(){ m.artist=TF.artist.EvalWithMetadbs(list); },
     function(){ m.album=TF.album.EvalWithMetadbs(list); },
+    function(){ m.albumArtist=TF.artistName.EvalWithMetadbs(list); },
     function(){ m.len=TF.len.EvalWithMetadbs(list); },
     function(){ m.artkey=TF.albkey.EvalWithMetadbs(list); },
     function(){ var s=TF.lensec.EvalWithMetadbs(list), t=0, i; for(i=0;i<s.length;i++) t+=parseInt(s[i],10)||0; m.totalSec=t; },
@@ -236,12 +251,12 @@ function metaReady(pi){ return !!plMetaMap[pi]; }
 
 // jobs={} cancels any build in flight: jobStep finds no entry for its key and simply stops, so a
 // job that started against the old data can never publish it
-function invalidateItems(){ plCacheMap={}; plMetaMap={}; plCoverCache={}; coverPickCache={}; mosaicCache={}; warmed={}; plOrderMap={}; plNameCache={}; plCountCache={}; plCardCache={}; qMetaCache={}; visPlCache=null; warmJob=null; jobs={}; gates={}; rowGate={}; shelfHandles=null; }
+function invalidateItems(){ plFilteredCache=null; plCacheMap={}; plMetaMap={}; plCoverCache={}; coverPickCache={}; mosaicCache={}; warmed={}; plOrderMap={}; plNameCache={}; plCountCache={}; plCardCache={}; qMetaCache={}; visPlCache=null; warmJob=null; jobs={}; gates={}; rowGate={}; shelfHandles=null; }
 
 /* ---- Playlist view sort: only reorders how rows are DISPLAYED. Native item indices (playback,
    row menu, drag targets) are untouched, so order[displayRow] maps to the real item index. */
-var plSort='artist', plSortDir='asc', plSortMenuOpen=false, PL_SORT_HB=[], HB_PLSORT=null, HB_PLSORTDIR=null;
-var PL_SORTS=[['Title','title'],['Artist','artist'],['Album','album']];
+var plSort='none', plSortDir='asc', plSortMenuOpen=false, PL_SORT_HB=[], HB_PLSORT=null, HB_PLSORTDIR=null;
+var PL_SORTS=[['Default','none'],['Title','title'],['Artist','artist'],['Album','album']];
 var plOrderMap={};
 // Lowercase sort keys built once per playlist and reused across re-sorts, for the same reason as
 // the All Songs index: cmpStr would otherwise lowercase both operands on every comparison.
@@ -255,8 +270,12 @@ function plKeys(pi){
   return meta.keys;
 }
 function buildPlOrder(pi){
-  var meta=getMeta(pi), k=plKeys(pi), n=meta.title.length, order=[], i;
+  var meta=getMeta(pi), n=meta.title.length, order=[], i;
   for(i=0;i<n;i++) order.push(i);
+  // Original order is the exact foobar playlist item order (including imported M3U8 order).
+  // Do not reverse it merely because the last explicit sort used Descending.
+  if(plSort==='none') return order;
+  var k=plKeys(pi);
   if(plSort==='title') order.sort(function(a,b){ return cmpK(k.t[a],k.t[b])||cmpK(k.a[a],k.a[b]); });
   else if(plSort==='album') order.sort(function(a,b){ return cmpK(k.l[a],k.l[b])||cmpK(k.a[a],k.a[b])||cmpK(k.t[a],k.t[b]); });
   else order.sort(function(a,b){ return cmpK(k.a[a],k.a[b])||cmpK(k.l[a],k.l[b])||cmpK(k.t[a],k.t[b]); });
@@ -268,5 +287,23 @@ function getPlOrder(pi){
   if(!c || c.sort!==plSort || c.dir!==plSortDir || c.n!==n){ c={sort:plSort,dir:plSortDir,n:n,order:buildPlOrder(pi)}; plOrderMap[pi]=c; }
   return c.order;
 }
-function setPlSort(s){ plSort=s; plSortMenuOpen=false; repaintAll(); }
-function togglePlSortDir(){ plSortDir=(plSortDir==='asc')?'desc':'asc'; repaintAll(); }
+/* Filter only the visible playlist rows. Original playlist item indices are retained, so
+   playing a track, adding to queue, and bulk actions still target the correct file. */
+var plFilteredCache=null;
+function getPlVisibleOrder(pi){
+  var order=getPlOrder(pi);
+  if(!inlineFilterActive() || !filterQuery.trim()) return order;
+  var q=filterQuery,cache=plFilteredCache;
+  if(cache && cache.pi===pi && cache.query===q && cache.sort===plSort && cache.dir===plSortDir && cache.count===order.length) return cache.order;
+  var m=getMeta(pi),filtered=[];
+  for(var i=0;i<order.length;i++){
+    var j=order[i];
+    if(fuzzyTrackMatch(q,[m.title[j],m.artist[j],m.albumArtist[j],m.album[j]])) filtered.push(j);
+  }
+  plFilteredCache={pi:pi,query:q,sort:plSort,dir:plSortDir,count:order.length,order:filtered};
+  return filtered;
+}
+// Entering Default never changes the remembered direction. When returning to a
+// named sort, the user's last Ascending/Descending choice is restored.
+function setPlSort(s){ plSort=s; plFilteredCache=null; plSortMenuOpen=false; repaintAll(); }
+function togglePlSortDir(){ if(plSort==='none') return; plSortDir=(plSortDir==='asc')?'desc':'asc'; plFilteredCache=null; repaintAll(); }

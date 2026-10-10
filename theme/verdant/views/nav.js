@@ -4,7 +4,7 @@
 
 // one sidebar row: cover + name + subtitle. pi<0 draws the library mosaic instead of a playlist cover.
 function drawNavRow(gr,y,h,on,hov,pi,name,sub){
-  if(on||hov) gr.FillRoundRect(R.navLib.x+8,y,R.navLib.w-16,h-4,6,6,on?COL.rowActive:COL.rowHover);
+  if((on||hov) && R.navLib.w>16 && h>4) gr.FillRoundRect(R.navLib.x+8,y,R.navLib.w-16,h-4,6,6,on?COL.rowActive:COL.rowHover);
   var cs=44, cx=R.navLib.x+16, cy=y+(h-cs)/2;
   if(pi>=0) drawPlCover(gr,cx,cy,cs,4,pi,name); else drawLibCover(gr,cx,cy,cs,4);
   var tx=cx+cs+12, tw=R.navLib.x+R.navLib.w-16-tx-((hov&&pi>=0)?26:0);   // leave room for the "..." button
@@ -19,11 +19,11 @@ function drawNav(gr){
   var bw=Math.floor((R.navTop.w-2*m-g)/2);
   var hx=R.navTop.x+m, sx2=hx+bw+g;
   var hon=(view==='home'), hhov=hv(hx,iy,hx+bw,iy+bh);
-  if(hon||hhov) gr.FillRoundRect(hx,iy,bw,bh,10,10,hon?COL.rowActive:COL.rowHover);
+  if((hon||hhov) && bw>0 && bh>0) gr.FillRoundRect(hx,iy,bw,bh,Math.min(10,bw/2,bh/2),Math.min(10,bw/2,bh/2),hon?COL.rowActive:COL.rowHover);
   drawIcon(gr,'home',hon?COL.text:COL.text2,hx,iy,bw,bh,26);
   HB_HOME={x0:hx,y0:iy,x1:hx+bw,y1:iy+bh};
   var son=(view==='search'), shov=hv(sx2,iy,sx2+bw,iy+bh);
-  if(son||shov) gr.FillRoundRect(sx2,iy,bw,bh,10,10,son?COL.rowActive:COL.rowHover);
+  if((son||shov) && bw>0 && bh>0) gr.FillRoundRect(sx2,iy,bw,bh,Math.min(10,bw/2,bh/2),Math.min(10,bw/2,bh/2),son?COL.rowActive:COL.rowHover);
   drawIcon(gr,'search',son?COL.text:COL.text2,sx2,iy,bw,bh,26);
   HB_SEARCH={x0:sx2,y0:iy,x1:sx2+bw,y1:iy+bh};
   // The canvas gap between the two cards is inside the region repaintNavAll invalidates but is

@@ -49,6 +49,7 @@ function setScroll(y){
   else if(view==='home') homeScroll=homeScrollT=px;
   else if(view==='songs') songsScroll=songsScrollT=px;
   else if(view==='search') searchScroll=searchScrollT=px;
+  else if(view==='album') albumScroll=px;
   repaintMain();
 }
 function setScrollN(y){ if(!SBN) return; navScroll=navScrollT=Math.round(sbFrac(y,SBN.top,SBN.h,SBN.thumbH)*SBN.maxPx); repaintNav(); }
@@ -135,19 +136,51 @@ function drawOverlays(gr){
     };
   }
   if(ctxMenu){
-    var ih=42, pad=6, i, it, iw=190;
-    // width follows the longest label (16px left inset + 24px breathing room on the right)
-    for(i=0;i<ctxMenu.items.length;i++) iw=Math.max(iw,Math.round(gr.CalcTextWidth(ctxMenu.items[i].label,FONT.pl))+40);
+    var ih=42,pad=6,i,it,iw=190,menu=ctxMenu;
+    for(i=0;i<menu.items.length;i++) iw=Math.max(iw,Math.round(gr.CalcTextWidth(menu.items[i].label,FONT.pl))+48+(menu.items[i].submenu?14:0));
     iw=Math.min(iw,Math.max(120,W-20));
-    var h=ctxMenu.items.length*ih+pad*2;
-    var mnx=Math.max(10,Math.min(ctxMenu.x,W-iw-10)), mny=Math.max(10,Math.min(ctxMenu.y,H-h-10));
-    gr.FillSolidRect(mnx+3,mny+4,iw,h,RGBA(0,0,0,120));       // soft shadow
+    var h=menu.items.length*ih+pad*2;
+    var mnx=Math.max(10,Math.min(menu.x,W-iw-10)),mny=Math.max(10,Math.min(menu.y,H-h-10));
+    gr.FillSolidRect(mnx+3,mny+4,iw,h,RGBA(0,0,0,120));
     gr.FillRoundRect(mnx,mny,iw,h,8,8,RGB(43,43,43));
-    for(i=0;i<ctxMenu.items.length;i++){
-      var iy=mny+pad+i*ih; it=ctxMenu.items[i];
-      if(hv(mnx,iy,mnx+iw,iy+ih)) gr.FillRoundRect(mnx+4,iy,iw-8,ih,5,5,RGBA(255,255,255,20));
-      tL(gr,it.label,FONT.pl,it.danger?RGB(240,96,96):COL.text,mnx+16,iy,iw-24,ih);
-      CTX_HB.push({x0:mnx,y0:iy,x1:mnx+iw,y1:iy+ih,act:it.act});
+    var parentY=mny;
+    for(i=0;i<menu.items.length;i++){
+      var iy=mny+pad+i*ih; it=menu.items[i];
+      if(it.act==='destinations') parentY=iy;
+      var active=hv(mnx,iy,mnx+iw,iy+ih)||(menu.subOpen&&it.submenu);
+      if(active) gr.FillRoundRect(mnx+4,iy,iw-8,ih,5,5,RGBA(255,255,255,20));
+      tL(gr,it.label,FONT.pl,it.danger?RGB(240,96,96):COL.text,mnx+16,iy,iw-(it.submenu?54:24),ih);
+      if(it.submenu){
+        var arx=mnx+iw-22, ary=iy+ih/2;
+        gr.DrawLine(arx-4,ary-5,arx+1,ary,2,COL.text2);
+        gr.DrawLine(arx+1,ary,arx-4,ary+5,2,COL.text2);
+      }
+      CTX_HB.push({x0:mnx,y0:iy,x1:mnx+iw,y1:iy+ih,act:it.act,menu:'root'});
+    }
+    menu.subRect=null;
+    if(menu.kind==='song' && menu.subOpen){
+      var dests=songDestinations(menu);
+      var dw=172;
+      for(i=0;i<dests.length;i++) dw=Math.max(dw,Math.round(gr.CalcTextWidth(dests[i].label,FONT.pl))+36);
+      dw=Math.min(dw,Math.max(130,W-22));
+      var page=Math.max(1,Math.min(dests.length,Math.floor((H-32-pad*2)/ih)));
+      menu.subPage=page;
+      menu.subFirst=clampPx(menu.subFirst||0,Math.max(0,dests.length-page));
+      var sh=page*ih+pad*2;
+      var sx=(mnx+iw+dw<=W-10)?mnx+iw:mnx-dw;
+      sx=Math.max(10,Math.min(sx,W-dw-10));
+      var sy=Math.max(10,Math.min(parentY-6,H-sh-10));
+      menu.subRect={x0:sx,y0:sy,x1:sx+dw,y1:sy+sh};
+      gr.FillSolidRect(sx+3,sy+4,dw,sh,RGBA(0,0,0,140));
+      gr.FillRoundRect(sx,sy,dw,sh,8,8,RGB(48,48,48));
+      for(i=0;i<page;i++){
+        var di=i+menu.subFirst,d=dests[di],dy=sy+pad+i*ih;
+        if(hv(sx,dy,sx+dw,dy+ih)) gr.FillRoundRect(sx+4,dy,dw-8,ih,5,5,RGBA(255,255,255,25));
+        tL(gr,d.label,FONT.pl,COL.text,sx+16,dy,dw-28,ih);
+        CTX_HB.push({x0:sx,y0:dy,x1:sx+dw,y1:dy+ih,act:d.act,menu:'sub'});
+      }
+      if(menu.subFirst>0) tC(gr,'▲',FONT.plSub,COL.text2,sx,sy,dw,12);
+      if(menu.subFirst+page<dests.length) tC(gr,'▼',FONT.plSub,COL.text2,sx,sy+sh-14,dw,12);
     }
   }
   if(confirmDel){
@@ -162,6 +195,13 @@ function drawOverlays(gr){
   }
   if(dupPrompt) drawDupPrompt(gr);
   if(rgPrompt) drawRgPrompt(gr);
+  // Always last: sort/group dropdowns should cover filtering, list headers and rows.
+  // Hit tests use exactly these final-painted rectangles.
+  if(plSortMenuOpen) drawSortMenu(gr);
+  if(sgMenuOpen) drawGroupMenu(gr);
+  if(audioPopup) drawAudioMenu(gr);
+  // Status popup is the final non-modal layer, never behind the track list.
+  if(rgTipShown) drawRgTip(gr);
 }
 // wrapped paragraph; returns the y just past the last line drawn
 function tPara(gr,s,f,c,x,y,w,lh){
@@ -190,10 +230,11 @@ function drawTitleBar(gr){
   if(mx0!==MENU_END){ MENU_END=mx0; applyCaption(); }
   // window controls (right)
   var closeX=W-CAPBW, maxX=W-CAPBW*2, minX=W-CAPBW*3;
-  drawCapBtn(gr,GLYPH.cmin,minX,CAPBW,false);
-  drawCapBtn(gr,winMaxed()?GLYPH.crestore:GLYPH.cmax,maxX,CAPBW,false);
-  drawCapBtn(gr,GLYPH.cclose,closeX,CAPBW,true);
-  HB_CAP={minX:minX,maxX:maxX,closeX:closeX,bw:CAPBW};
+  // drawCapBtn(gr,GLYPH.cmin,minX,CAPBW,false);
+  // drawCapBtn(gr,winMaxed()?GLYPH.crestore:GLYPH.cmax,maxX,CAPBW,false);
+  // drawCapBtn(gr,GLYPH.cclose,closeX,CAPBW,true);
+  // HB_CAP={minX:minX,maxX:maxX,closeX:closeX,bw:CAPBW};
+  HB_CAP=null;
 }
 
 /* ---- Header dropdowns: a pill that opens a floating menu. Shared by the playlist sort-by and
@@ -205,10 +246,14 @@ function drawDropPill(gr,x,y,w,h,label,open){
   drawIcon(gr,'chevron',COL.text2,x+w-32,y+(h-20)/2,20,20,18);
   return {x0:x,y0:y,x1:x+w,y1:y+h};
 }
-function drawDropMenu(gr,anchor,items,cur,minW){
+function drawDropMenu(gr,anchor,items,cur,minW,avoid){
   var out=[];
   if(!anchor) return out;
-  var bw=Math.max(minW,anchor.x1-anchor.x0), ih=40, bx=anchor.x1-bw, iy=anchor.y1+6, bh=items.length*ih+10;
+  var bw=Math.max(minW,anchor.x1-anchor.x0), ih=40, iy=anchor.y1, bh=items.length*ih+10;
+  // The queue is an overlay on compact windows. Keep the dropdown reachable
+  // while still painting it above the entire main view (including Ctrl+F).
+  var farRight=(W<1180&&compactQueueOpen&&R.queueW)?R.queue.x-M.gap:R.main.x+R.main.w;
+  var bx=Math.max(R.main.x+4,Math.min(anchor.x1-bw,farRight-bw-4));
   gr.FillSolidRect(bx+3,iy+4,bw,bh,RGBA(0,0,0,120));
   gr.FillRoundRect(bx,iy,bw,bh,8,8,RGB(43,43,43));
   for(var i=0;i<items.length;i++){
@@ -220,10 +265,15 @@ function drawDropMenu(gr,anchor,items,cur,minW){
   return out;
 }
 
-function drawSortDirBtn(gr,x,y,w,h){
-  gr.FillRoundRect(x,y,w,h,h/2,h/2,hv(x,y,x+w,y+h)?RGB(58,58,58):RGBA(0,0,0,90));
-  drawIcon(gr,plSortDir==='asc'?'sortAsc':'sortDesc',COL.text,x,y,w,h,18);
-  HB_PLSORTDIR={x0:x,y0:y,x1:x+w,y1:y+h};
+function drawSortDirBtn(gr,x,y,w,h,enabled){
+  // Always paint the same button footprint. Default ignores direction and keeps
+  // the last selected arrow as a subdued, non-interactive reminder.
+  var over=enabled && hv(x,y,x+w,y+h);
+  gr.FillRoundRect(x,y,w,h,h/2,h/2,over?RGB(58,58,58):RGBA(0,0,0,90));
+  drawIcon(gr,plSortDir==='asc'?'sortAsc':'sortDesc',enabled?COL.text:COL.text3,x,y,w,h,18);
+  HB_PLSORTDIR=enabled?{x0:x,y0:y,x1:x+w,y1:y+h}:null;
 }
-function drawSortMenu(gr){ PL_SORT_HB=plSortMenuOpen?drawDropMenu(gr,HB_PLSORT,PL_SORTS,plSort,180):[]; }
+function drawSortMenu(gr){
+  PL_SORT_HB=plSortMenuOpen?drawDropMenu(gr,HB_PLSORT,PL_SORTS,plSort,180):[];
+}
 function drawGroupMenu(gr){ SG_HB=sgMenuOpen?drawDropMenu(gr,HB_SG,SONGS_GROUPS,songsGroup,216):[]; }

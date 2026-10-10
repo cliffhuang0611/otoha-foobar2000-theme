@@ -127,7 +127,7 @@ function rowHandlesSongs(){
    (grid and shelf). */
 var skelImgs={};
 function skelCardsCached(gr,x,y,w,h,cardW,gap){
-  if(w<=0||h<=0) return;
+  if(w<=0||h<=0||cardW<=0||gap<0) return;
   var k=w+'x'+h+'x'+cardW+'x'+gap, im=skelImgs[k];
   if(im===undefined){
     im=null;
@@ -144,12 +144,14 @@ function skelCardsCached(gr,x,y,w,h,cardW,gap){
   else skelCards(gr,x,y,w,h,cardW,gap);
 }
 function skelCards(gr,x,y,w,h,cardW,gap){
+  if(w<=0 || h<=0 || cardW<=0 || cardW>10000) return;
   var cardH=cardW+56, cs=cardW-24, cx, cy;
   for(cy=y; cy<y+h; cy+=cardH+8){
     for(cx=x; cx+cardW<=x+w; cx+=cardW+gap){
       var ch=Math.min(cardH,y+h-cy); if(ch<24) break;
-      gr.FillRoundRect(cx,cy,cardW,ch,8,8,COL.elev);
-      if(ch>cs+12) gr.FillRoundRect(cx+12,cy+12,cs,cs,6,6,RGB(34,34,34));
+      if(cardW>=16 && ch>=16) gr.FillRoundRect(cx,cy,cardW,ch,Math.min(8,cardW/2,ch/2),Math.min(8,cardW/2,ch/2),COL.elev);
+      else gr.FillSolidRect(cx,cy,cardW,ch,COL.elev);
+      if(cs>=12 && ch>=cs+12) gr.FillRoundRect(cx+12,cy+12,cs,cs,6,6,RGB(34,34,34));
     }
   }
 }

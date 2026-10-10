@@ -1,0 +1,129 @@
+KEYBOARD UPDATE — JSplitter v3.8.12 (October 11, 2026)
+- Added Ctrl+A / Ctrl+Shift+A track selection, Enter to play selection,
+  Shift+Enter to queue selection, Alt+Left/Right page history,
+  Ctrl+L to global Search, and F5 to refresh.
+- Preserved previous Page Up/Down, Home/End, Delete, and Ctrl+F.
+- Escape from global Search now goes back to the prior page; if there is
+  no previous entry, goes Home. Search query is preserved.
+- Escape inside a local Ctrl+F filter still closes that filter.
+- Text editing retains regular Windows-style text shortcut handling.
+- Best-effort optional app-wide keyboard commands are registered only if
+  fb.RegisterMainMenuCommand is available in JSplitter. User must assign
+  global hotkeys in foobar2000 Preferences > Keyboard Shortcuts.
+- No undocumented focus-stealing tricks: initial focus remains limited
+  by JSplitter's keyboard event dispatch on the running host version.
+
+Verdant — Compact header spacing and stable playlist sorting — 2026-10-10
+
+- Compact All Songs Normalize/Group controls raised 14 px above their previous positions.
+- Compact playlist Sort controls raised to leave a 22 px bottom margin in their header.
+- Closed Queue's expand button moved 30 px inward so it does not overlap the Home scrollbar
+  or intercept clicks in the scrollbar hit region. When Queue is expanded, the icon remains
+  at its left edge for collapsing.
+- Playlist's original M3U8/native sequence now reads 'Default' in the sort list and pill.
+- Always keep a 38 px direction button and the 8 px spacer beside Sort: fixed positioning
+  when switching Default/Title/Artist/Album.
+- Default does not apply ascending/descending. The arrow stays visible but dim/disabled,
+  and the last selected direction is remembered. Returning to a named sort restores it.
+- Sorting remains display-only; it never changes the native playlist item order.
+- All previous audio, queue, search, metadata, multi-select and menu changes remain.
+
+Please test in foobar2000: JS syntax and logic tested locally, but Windows render not available.
+
+UI PATCH — COMBINED AUDIO SETTINGS + TOPMOST MENUS
+- One flat, icon-only audio settings button sits directly left of the volume control.
+- Its single menu provides Output device and DSP preset categories; hover or click
+  opens a contiguous side submenu. Clicking an option applies it and closes everything;
+  clicking elsewhere or pressing Esc closes the menu.
+- Both sort and group dropdowns are drawn in the final overlay stage after all other
+  panels, so Ctrl+F filter/search fields cannot cover them. Dropdowns are flush with
+  their buttons (no 6px gap). Outside-click dismissal is preserved.
+- Compact All Songs header accounts for the queue's overlay width when sizing controls.
+- No new components are required. All existing playlist/library features remain.
+
+AUDIO OUTPUT + DSP PRESET SELECTORS (October 11, 2026)
+- Added two compact buttons between transport and volume in Verdant's bottom bar.
+- Output devices are listed with fb.GetOutputDevices and switched using the driver/device IDs.
+- Saved DSP presets are listed with fb.GetDSPPresets and applied by index.
+- Menus open upward, highlight the active setting, and scroll when there are many devices.
+- Controls show text labels on wider windows and icons only in compact windows.
+- If the transport/volume gap is too narrow, buttons hide rather than overlap controls.
+- Switching happens only on an explicit click. No automatic DSP or output changes.
+- Uses built-in JSplitter APIs; no additional foobar components required.
+
+Z-ORDER / COMPACT QUEUE FIX (October 10, 2026)
+- With the compact queue expanded, search and inline filter boxes stop before
+  the queue collapse icon. Their partial caret repaints cannot overdraw it.
+- When a playlist sort dropdown would overlap an open Ctrl+F filter, the menu
+  shifts below the filter (including its clear button). The dropdown hitboxes
+  move with the drawn menu. Other layouts keep their existing position.
+- Existing playlist order, M3U8 export, selection, lyrics, and IME behavior
+  have been preserved.
+
+Verdant — Playlist original order and Save playlist — 2026-10-10
+
+- Playlist views default to 'Playlist order' (no alphabetical sorting), using
+  foobar2000's stored item indices. Imported M3U8 order is preserved.
+- Title / Artist / Album remain optional view-only sorts.
+- The ascending/descending button hides for Playlist order, because it would
+  misleadingly imply the underlying order is being modified.
+- Playlist right-click menus now have 'Save playlist...' which opens foobar2000's
+  native Save Playlist dialog. You can select M3U8 in Save as type.
+- Saving a different sidebar playlist temporarily activates it and restores
+  the previous active playlist afterward; no file is silently overwritten.
+- When the compact queue is expanded, the playlist sort controls remain to
+  the left of the queue instead of being drawn underneath it.
+- Includes the previous compact queue search and Ctrl+F filter overflow fix.
+
+Notes: This action EXPORTS the in-memory playlist; foobar2000 does not retain
+an automatic link back to the original M3U8 file for overwrite-in-place.
+Behavior requires runtime confirmation inside foobar2000/JSplitter.
+
+Verdant — Compact queue / search field layout fix — 2026-10-10
+
+- When the queue is expanded in compact windows (<1180px), the global
+  Search input now stops before the queue panel instead of drawing beneath it.
+- The inline Ctrl+F filter in All Songs and playlists uses the same constraint.
+- The filter's close (X) control stays accessible to the left of the queue.
+- In very narrow layouts, the search magnifier hides to preserve typing space.
+- Input hit-testing, selection, caret, and partial repaint use the same rectangle.
+- No changes to the IME handling, fuzzy matching, music views, or queue behavior.
+
+Verdant — inline search restored (Japanese IME dialog removed) — 2026-10-10
+
+Changes from verdant-search-compatibility-fix.zip:
+- Removed the あ IME button and its utils.InputBox native dialog entirely.
+- Removed the F2 native-dialog shortcut. F2 is no longer intercepted by Verdant.
+- Restored full-width, click-to-edit Search / Ctrl+F track filter fields. Text input,
+  selections, Ctrl+A, Ctrl+Arrow, copy/paste, fuzzy matching, multi-selection,
+  track menus, album pages, synced lyrics and disc ordering remain unchanged.
+- Ctrl+F requires removing foobar2000's default [main] Edit / Search binding in
+  File > Preferences > Keyboard Shortcuts, as you already did.
+
+IME limitation:
+JSplitter's GDI-drawn search fields do not expose a native caret position to
+Windows Japanese IME. Japanese text can still be entered and committed in the
+inline field, but the preedit/candidate window may appear at the top left.
+This is NOT fixed by scripting the fake caret. A true inline correction would
+require JSplitter to expose Win32 caret/IME composition positioning (or a native
+child edit control), or an optional separately maintained native helper.
+No external programs or modal input dialogs are added in this build.
+
+Backup the previous verdant folder and then replace it with this one.
+JavaScript syntax and source-level behavior smoke checks were run; Windows
+runtime IME composition still requires testing in foobar2000.
+
+
+Loudness status tooltip (2026-10-11)
+-------------------------------------
+- Removed the permanently rendered "x of y tracks scanned" line from All Songs in both compact and full-size layouts.
+- Hover Normalize volume for 400 ms to see a tooltip with the ReplayGain-tagged track count, proportion, remaining unscanned tracks, and normalization state when complete.
+- The status measures tracks with ReplayGain tags, not the progress of a running foobar2000 scan.
+- The tooltip is painted last, clears on mouse leave and clicking, and stays inside the visible content region when the compact queue is open.
+
+
+2026-10-11 JSplitter v3.8.12 tooltip crash fix
+---------------------------------------------
+- Prevent invalid FillRoundRect arc values when scan progress is very low.
+- The progress bar is rounded when wide enough and uses a solid fill for tiny progress values.
+- No other layout, hover delay, or tooltip contents changed.

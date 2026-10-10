@@ -92,3 +92,72 @@ function drawNormalizePill(gr,x,y,w,h){
   tL(gr,'Normalize volume',FONT.pl,col,x+42,y,w-56,h);
   return {x0:x,y0:y,x1:x+w,y1:y+h};
 }
+
+
+/* Scan-status tooltip: only while hovering over the Normalize pill. It is painted in
+   drawOverlays(), after the list and other chrome, rather than consuming header height.
+   The percentage is the share of FILES WITH ReplayGain tags, not a live scan job. */
+var rgTipTimer=null, rgTipHover=false, rgTipShown=false, RG_TIP_DELAY=400;
+function rgTipClear(){
+  if(rgTipTimer!==null){ try{window.ClearTimeout(rgTipTimer);}catch(e){} rgTipTimer=null; }
+  rgTipHover=false; rgTipShown=false;
+}
+function rgTipAllowed(x,y){
+  return !fsMode && view==='songs' && !!HB_RGNORM && inRect(x,y,HB_RGNORM) &&
+         !rgPrompt && !renameEdit && !ctxMenu && !confirmDel && !dupPrompt &&
+         !sgMenuOpen && !plSortMenuOpen && !audioPopup;
+}
+function rgTipTrack(x,y){
+  if(!rgTipAllowed(x,y)){
+    var wasShown=rgTipShown;
+    rgTipClear();
+    // Full repaint clears a popup that extends outside its original button rectangle.
+    if(wasShown) repaintAll();
+    return;
+  }
+  if(rgTipHover) return; // keep one timer while moving inside the same button
+  rgTipHover=true;
+  rgTipTimer=window.SetTimeout(function(){
+    rgTipTimer=null;
+    if(rgTipHover && rgTipAllowed(mx,my)){
+      rgTipShown=true;
+      repaintAll();
+    }
+  },RG_TIP_DELAY);
+}
+function drawRgTip(gr){
+  if(!rgTipShown || !rgTipAllowed(mx,my)) return;
+  var st=rgStat;
+  var availRight=(W<1180 && compactQueueOpen && R.queueW)?R.queue.x-10:R.main.x+R.main.w-12;
+  var xMin=R.main.x+12, room=availRight-xMin, width=Math.min(288,room), height=108;
+  if(width<140) return;
+  var x=Math.max(xMin,Math.min(HB_RGNORM.x0,availRight-width));
+  var y=Math.min(HB_RGNORM.y1+8,R.barY-height-12);
+  if(y< R.main.y+8) y=R.main.y+8;
+  gr.FillRoundRect(x+3,y+4,width,height,9,9,RGBA(0,0,0,155));
+  gr.FillRoundRect(x,y,width,height,9,9,RGB(40,40,40));
+  gr.DrawRoundRect(x,y,width,height,9,9,1,RGBA(255,255,255,26));
+  var ix=x+15, iw=width-30;
+  tL(gr,'Loudness scan status',FONT.pl,COL.text,ix,y+10,iw,21);
+  if(!st || !st.total){
+    tL(gr,'Library scan data unavailable',FONT.plSub,COL.text2,ix,y+40,iw,20);
+    return;
+  }
+  var count=fmtNum(st.scanned)+' / '+fmtNum(st.total)+' tracks';
+  tL(gr,count,FONT.plSub,COL.text2,ix,y+36,iw,20);
+  // JSplitter v3's GDI FillRoundRect throws when arc size exceeds a tiny
+  // rectangle (e.g. 87/4569 tracks yields a ~5px-wide bar). Quantize first,
+  // never pass fractional arc sizes, and draw very short fills as solid rects.
+  var frac=Math.max(0,Math.min(1,st.scanned/st.total));
+  var progY=Math.round(y+65), progX=Math.round(ix), progW=Math.max(1,Math.round(iw));
+  gr.FillRoundRect(progX,progY,progW,5,2,2,RGB(85,85,85));
+  if(frac>0){
+    var fillW=Math.max(1,Math.min(progW,Math.round(progW*frac)));
+    if(fillW<8) gr.FillSolidRect(progX,progY,fillW,5,COL.green);
+    else gr.FillRoundRect(progX,progY,fillW,5,2,2,COL.green);
+  }
+  var suffix=rgScanFailed ? 'ReplayGain scan could not start'
+            : st.missing.length ? (fmtNum(st.missing.length)+' remaining ('+Math.round(frac*100)+'% scanned)')
+            : ('All scanned '+CH_DOT+' normalization '+(rgModeOn()?'on':'off'));
+  tL(gr,suffix,FONT.plSub,rgScanFailed?RGB(240,110,110):COL.text2,ix,y+76,iw,21);
+}

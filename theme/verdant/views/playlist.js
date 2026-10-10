@@ -12,37 +12,51 @@ function drawPlaylist(gr,r){
     if(metaOk || skelVisible('meta'+p.i)) drawViewSkeleton(gr,r);
     return;
   }
-  gr.FillGradRect(r.x,r.y,r.w,M.headH,90,blend(artHue(plChoice(p.i).single,p.name),COL.base,0.42),COL.base,1.0);
-  var ax=r.x+M.cpad, ay=r.y+44, art=M.artSz;
+  var compact = r.w < 950;
+  var headH = compact ? 156 : M.headH;
+  gr.FillGradRect(r.x,r.y,r.w,headH,90,blend(artHue(plChoice(p.i).single,p.name),COL.base,0.42),COL.base,1.0);
+  var ax=r.x+M.cpad, ay=r.y+(compact?18:44), art=compact?112:M.artSz;
   drawPlCover(gr,ax,ay,art,8,p.i,p.name);
-  // sort pill + asc/desc button, right-aligned like the All Songs group pill; header text
-  // stops short of this column so the two can never collide on a narrow panel
-  var rx0=r.x+r.w-M.cpad, sortDirW=38, sortPillW=200, sortGap=8, sortTotalW=sortPillW+sortGap+sortDirW;
-  var sortX=Math.max(ax+art+24,rx0-sortTotalW), sortY=ay+142;
-  var tx=ax+art+24, tw=Math.max(120,sortX-12-tx);
-  tL(gr,'PLAYLIST',FONT.eyebrow,COL.text,tx,ay+6,tw,18);
-  tL(gr,p.name,FONT.title,COL.text,tx,ay+28,tw,84);
+  var rx0=r.x+r.w-M.cpad, sortDirW=38, sortGap=8;
+  // On compact layouts the queue overlays the right edge of the main panel.
+  // Keep the sort controls clickable to the LEFT of the expanded queue.
+  if(W<1180 && compactQueueOpen && R.queueW)
+    rx0=Math.min(rx0,R.queue.x-M.gap-M.cpad);
+  var sortPillW=compact?Math.min(160,Math.max(90,rx0-r.x-180)):200;
+  // Always reserve space for direction so selecting Default never shifts the sort pill.
+  var sortTotalW=sortPillW+sortGap+sortDirW;
+  var tx=ax+art+(compact?16:24);
+  var sortX=compact?Math.max(r.x+M.cpad,rx0-sortTotalW):Math.max(tx,rx0-sortTotalW);
+  // Compact header controls need clear breathing room above the track-list boundary.
+  var sortY=compact?(r.y+headH-38-22):ay+142;
+  var tw=compact?Math.max(50,rx0-tx):Math.max(120,sortX-12-tx);
+  tL(gr,'PLAYLIST',FONT.eyebrow,COL.text,tx,ay+(compact?0:6),tw,18);
+  tL(gr,p.name,fitHeaderFont(gr,p.name,tw),COL.text,tx,ay+(compact?22:28),tw,compact?38:84);
   var meta0=getMeta(p.i);
-  tL(gr,p.count+' songs'+(meta0.totalSec>0?(' '+CH_DOT+' '+fmtDur(meta0.totalSec)):''),FONT.meta,COL.text2,tx,ay+150,tw,22);
-  HB_PLSORT=drawDropPill(gr,sortX,sortY,sortPillW,38,'Sort: '+labelOf(PL_SORTS,plSort,'Artist'),plSortMenuOpen);
-  drawSortDirBtn(gr,sortX+sortPillW+sortGap,sortY,sortDirW,38);
+  if(!compact) tL(gr,p.count+' songs'+(meta0.totalSec>0?(' '+CH_DOT+' '+fmtDur(meta0.totalSec)):''),FONT.meta,COL.text2,tx,ay+150,tw,22);
+  HB_PLSORT=drawDropPill(gr,sortX,sortY,sortPillW,38,'Sort: '+labelOf(PL_SORTS,plSort,'Default'),plSortMenuOpen);
+  drawSortDirBtn(gr,sortX+sortPillW+sortGap,sortY,sortDirW,38,plSort!=='none');
 
   // track list
   var lx=r.x+M.cpad, rx=r.x+r.w-M.cpad;
-  var listTop=r.y+M.headH+8;
+  var listTop=r.y+headH+8;
+  if(inlineFilterActive())listTop+=62;
   var numW=30, durW=64, cgap=16;
-  var albumW=Math.round((rx-lx-numW-durW-cgap*3)*0.34);
-  var titleX=lx+numW+cgap, titleW=(rx-lx-numW-durW-albumW-cgap*3);
+  var showAlbum = (r.w>=620);
+  var albumW=showAlbum?Math.max(85,Math.round((rx-lx-numW-durW-cgap*3)*0.34)):0;
+  var titleX=lx+numW+cgap;
+  var titleW=rx-lx-numW-durW-albumW-cgap*(showAlbum?3:2);
   var albumX=titleX+titleW+cgap;
   var rowsTop=listTop+34, rh=M.rowH, cropY=r.y+r.h, viewH=cropY-rowsTop;
-  var contentH=p.count*rh, maxPx=Math.max(0,contentH-viewH);   // firstRow is a PIXEL offset
+  var order=getPlVisibleOrder(p.i); // display position -> original playlist item index
+  var visibleCount=order.length;
+  var contentH=visibleCount*rh, maxPx=Math.max(0,contentH-viewH);   // firstRow is a PIXEL offset
   PL_MAXPX=maxPx;
   firstRow=clampPx(firstRow,maxPx); firstRowT=clampPx(firstRowT,maxPx);
   var loc=playingLoc();
   var items=getItems(p.i), meta=getMeta(p.i), shufHere=npIsShuffleOf(p.name);
-  var order=getPlOrder(p.i);   // display position -> native item index
   warmOnce('pl'+p.i,items);
-  for(var d=Math.floor(firstRow/rh); d<p.count; d++){
+  for(var d=Math.floor(firstRow/rh); d<visibleCount; d++){
     var ry=rowsTop+d*rh-firstRow; if(ry>=cropY) break;
     var j=order[d]; var h=items[j]; if(!h){ continue; }
     var isPlaying=(loc && loc.IsValid && loc.PlaylistIndex===p.i && loc.PlaylistItemIndex===j)
@@ -50,7 +64,8 @@ function drawPlaylist(gr,r){
     // the row whose context menu is open stays lit (brighter than hover)
     var isMenuRow=!!(ctxMenu && ctxMenu.kind==='track' && ctxMenu.pl===p.i && ctxMenu.item===j);
     var isHover=hv(r.x,ry,r.x+r.w,ry+rh)||isMenuRow;
-    if(isHover) gr.FillRoundRect(lx-8,ry,rx-lx+16,rh,4,4,isMenuRow?COL.rowActive:COL.rowHover);
+    if(isTrackSelected({pl:p.i,item:j}) || isMenuRow) gr.FillRoundRect(lx-8,ry,rx-lx+16,rh,4,4,COL.rowActive);
+    else if(isHover) gr.FillRoundRect(lx-8,ry,rx-lx+16,rh,4,4,COL.rowHover);
     var titleCol=isPlaying?COL.green:COL.text;
     if(isHover) drawIcon(gr,'play',COL.text,lx,ry,numW,rh,14);
     else tL(gr,String(d+1),FONT.rowNum,isPlaying?COL.green:COL.text2,lx,ry,numW,rh);
@@ -59,17 +74,22 @@ function drawPlaylist(gr,r){
     var ttx=titleX+cs+12, ttw=titleW-cs-12;
     tL(gr,meta.title[j],FONT.rowTitle,titleCol,ttx,ry+8,ttw,20);
     tL(gr,meta.artist[j],FONT.rowArtist,COL.text2,ttx,ry+30,ttw,16);
-    tL(gr,alb,FONT.rowCell,COL.text2,albumX,ry,albumW,rh);
+    if(showAlbum) tL(gr,alb,FONT.rowCell,COL.text2,albumX,ry,albumW,rh);
     tR(gr,meta.len[j],FONT.rowCell,COL.text2,rx-durW,ry,durW,rh);
     HB_TR.push({x0:lx-8,y0:ry,x1:rx+8,y1:ry+rh,pl:p.i,item:j,pgx0:lx,pgx1:lx+numW});
   }
   // crop the partial rows top & bottom, then draw the sticky column header on top
   gr.FillSolidRect(r.x,rowsTop-rh,r.w,rh,COL.base);
   gr.FillSolidRect(r.x,cropY,r.w,M.pad+2,COL.black);   // gutter below the panel
-  if(p.count===0){ drawPlEmpty(gr,r,rowsTop-rh,cropY); drawSortMenu(gr); return; }   // no column headings over a void
+  if(p.count===0 && !inlineFilterActive()){ drawPlEmpty(gr,r,rowsTop-rh,cropY); return; }
+  if(visibleCount===0 && inlineFilterActive()){
+    drawInlineFilterBox(gr,r);
+    tC(gr,'No matching tracks',FONT.sect,COL.text2,r.x,rowsTop+44,r.w,28);
+    return;
+  }   // no column headings over a void
   tL(gr,'#',FONT.head,COL.text2,lx,listTop,numW,20);
   tL(gr,'TITLE',FONT.head,COL.text2,titleX,listTop,titleW,20);
-  tL(gr,'ALBUM',FONT.head,COL.text2,albumX,listTop,albumW,20);
+  if(showAlbum) tL(gr,'ALBUM',FONT.head,COL.text2,albumX,listTop,albumW,20);
   drawIcon(gr,'clock',COL.text2,rx-16,listTop,16,20,15);
   gr.DrawLine(lx,listTop+26,rx,listTop+26,1,COL.line);
   drawScrollbar(gr,rx+8,rowsTop,viewH,firstRow,maxPx,viewH,contentH,hv(r.x,r.y,r.x+r.w,cropY)||drag==='scroll');
@@ -84,7 +104,7 @@ function drawPlaylist(gr,r){
       tC(gr,'Drop to add to this playlist',FONT.pl,COL.black,cxOf(ix,iw,lw),ly,lw,lh);
     }
   }
-  drawSortMenu(gr);
+  if(inlineFilterActive())drawInlineFilterBox(gr,r); // after sticky list-header mask
 }
 // zero-track playlist: centred badge/headline/buttons, or one big drop cue while files are
 // dragged over it. Degrades from the top down as the panel gets shorter.

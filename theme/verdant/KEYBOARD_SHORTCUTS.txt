@@ -1,0 +1,56 @@
+Verdant — keyboard shortcuts (JSplitter 3.8.12)
+
+When Verdant has keyboard focus:
+ Page Up / Page Down      Scroll the current page
+ Home / End              Jump to top / bottom
+ Delete                  Remove highlighted tracks from editable playlist (never delete files)
+ Escape                  Search: previous page (Home if none); filter: close; otherwise deselect
+ Ctrl+A                  Select all tracks in the current visible/filtered results
+ Ctrl+Shift+A            Clear track selection
+ Enter                   Play first selected track in display order
+ Shift+Enter             Queue all selected tracks in display order
+ Alt+Left / Alt+Right    Navigate backward/forward through Verdant page history
+ Ctrl+L                  Open Verdant global Search
+ Ctrl+F                  Filter the current playlist / All Songs, or go to Search
+ F5                      Refresh the current view
+
+When typing in the custom Search/filter bar, Ctrl+A, Home, End, Delete,
+Ctrl+Arrows, and other editing shortcuts keep their usual text-editing
+behavior. Escape closes a playlist filter or leaves the global Search
+page without clearing the query. Ctrl+L/F5/Alt+Arrow can navigate away.
+
+Windows focus / foobar shortcuts:
+JSplitter's on_key_down only runs when this panel has keyboard focus.
+The existing grab_focus:true helps after a click, but does not guarantee
+that foobar startup puts keyboard focus on this panel.
+
+The theme optionally calls fb.RegisterMainMenuCommand() if that API
+exists in the running JSplitter. If supported, it adds 'Verdant: ...'
+commands to foobar's menu. Go to File > Preferences > Keyboard Shortcuts,
+click Add New, find the registered Verdant commands and assign hotkeys.
+These foobar-managed shortcuts can then work while foobar itself is
+focused even if Verdant has not been clicked. Please remove conflicting
+foobar shortcuts first. This is not automatic and availability has not
+been confirmed for JSplitter v3.8.12; if no Verdant commands appear,
+the existing panel-focus requirement remains. Do not change any foobar
+keyboard preferences without checking the assignments first.
+
+Registered commands if supported:
+ Scroll page up, Scroll page down, Scroll to top, Scroll to bottom,
+ Delete selected playlist tracks, Find in current view,
+ Select visible tracks, Clear track selection, Play selected track,
+ Queue selected tracks, Go back, Go forward, Focus global search,
+ Refresh Verdant view, Leave Search / Back.
+
+Arrow-key track selection (track lists and Search song results)
+---------------------------------------------------------
+Up / Down         Move selection to previous / next displayed track and scroll it into view.
+Shift+Up/Down     Extend/shrink a range from the anchored track.
+Ctrl+Up/Down      Add the next/previous track to the current selection.
+Ctrl+Shift+Up/Down Extend the range while retaining existing individual selections.
+Enter             Play first selected track in display order; add the other selected tracks to the playback queue.
+Shift+Enter       Add every selected track to the playback queue without changing playback.
+
+Artist View normally scrolls by album block; keyboard navigation also reveals
+selected tracks further down long albums. The search box uses Left/Right for its text caret
+and Up/Down for song-result navigation.

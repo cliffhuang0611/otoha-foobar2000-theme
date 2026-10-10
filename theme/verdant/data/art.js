@@ -199,6 +199,8 @@ function rowCover(row){
   return p.list.length?p.list[0]:row.handle;
 }
 function drawCover(gr,x,y,sz,rad,h,seed,key){
+  if(!isFinite(sz) || sz<1) return;
+  sz=Math.floor(sz); rad=Math.max(0,Math.min(Math.floor(Number(rad))||0,Math.floor(sz/2)));
   var img=h?getThumb(h,key||albKey(h),sz):null;
   if(img){ gr.DrawImage(img,x,y,sz,sz,0,0,img.Width,img.Height,0,255); }
   else if(rad>0){ gr.FillRoundRect(x,y,sz,sz,rad,rad,coverCol(seed)); }
@@ -226,12 +228,19 @@ function circleMask(size){
   m.ReleaseGraphics(g); maskCache[k]=m; return m;
 }
 function roundMask(size,rad){
+  // GDI+ rejects rounded-rect arcs larger than the available bitmap.
+  size=Math.floor(Number(size));
+  if(!isFinite(size) || size<1) return null;
+  rad=Math.max(0,Math.min(Math.floor(Number(rad))||0,Math.floor(size/2)));
   var k='r'+size+'_'+rad; if(maskCache[k]) return maskCache[k];
   var m=gdi.CreateImage(size,size), g=m.GetGraphics();
-  g.FillSolidRect(0,0,size,size,RGB(255,255,255)); g.SetSmoothingMode(2); g.FillRoundRect(0,0,size,size,rad,rad,RGB(0,0,0));
+  g.FillSolidRect(0,0,size,size,RGB(255,255,255)); g.SetSmoothingMode(2);
+  if(rad>0) g.FillRoundRect(0,0,size,size,rad,rad,RGB(0,0,0));
+  else g.FillSolidRect(0,0,size,size,RGB(0,0,0));
   m.ReleaseGraphics(g); maskCache[k]=m; return m;
 }
 function maskedArt(h,seed,size,mask,tag){
+  if(!mask || !isFinite(size) || size<1) return null;
   var k=(h?albKey(h):(seed||''))+'|'+size+'|'+tag;   // keyed by album, not the seed label ('np' is constant -> stale art)
   if(cArtCache.hasOwnProperty(k)) return cArtCache[k];
   var art=h?getArt(h):null;
@@ -241,14 +250,20 @@ function maskedArt(h,seed,size,mask,tag){
   capPut(cArtCache,cArtOrder,CART_CAP,k,res); return res;
 }
 function drawCircle(gr,x,y,size,h,seed){
+  if(!isFinite(size) || size<1) return;
+  size=Math.floor(size);
   var ci=maskedArt(h,seed,size,circleMask(size),'c');
   if(ci) gr.DrawImage(ci,x,y,size,size,0,0,ci.Width,ci.Height,0,255);
   else gr.FillEllipse(x,y,size,size,coverCol(seed));
 }
 function drawRounded(gr,x,y,size,rad,h,seed){
+  if(!isFinite(size) || size<1) return;
+  size=Math.floor(size);
+  rad=Math.max(0,Math.min(Math.floor(Number(rad))||0,Math.floor(size/2)));
   var ri=maskedArt(h,seed,size,roundMask(size,rad),'r'+rad);
   if(ri) gr.DrawImage(ri,x,y,size,size,0,0,ri.Width,ri.Height,0,255);
-  else gr.FillRoundRect(x,y,size,size,rad,rad,coverCol(seed));
+  else if(rad>0) gr.FillRoundRect(x,y,size,size,rad,rad,coverCol(seed));
+  else gr.FillSolidRect(x,y,size,size,coverCol(seed));
 }
 /* playlist cover: up to COVER_CANDS DISTINCT albums to choose from -- four of them WITH art make
    the 2x2 mosaic, otherwise the first one with art is shown alone. list/single stay what they
@@ -270,6 +285,7 @@ function plCovers(pi){
 }
 function plChoice(pi){ return coverChoice('pl|'+pi,plCovers(pi)); }
 function mosaicImg(handles,seed,size,rad){
+  if(!isFinite(size) || size<4) return null;
   var key=(seed||'')+'|'+size+'|m'+rad;
   if(mosaicCache.hasOwnProperty(key)) return mosaicCache[key];
   var i, ready=true;
@@ -310,13 +326,19 @@ function plCoverReady(pi){
   h=c.single; return !h || artLoaded(albKey(h));
 }
 function paintPlCard(gr,x,y,w,pi,hov){
-  gr.FillRoundRect(x,y,w,w+56,8,8,hov?RGB(40,40,40):COL.elev);
+  if(!isFinite(w) || w<1) return;
+  w=Math.floor(w);
+  var r=Math.min(8,Math.floor(w/2));
+  if(r>0) gr.FillRoundRect(x,y,w,w+56,r,r,hov?RGB(40,40,40):COL.elev);
+  else gr.FillSolidRect(x,y,w,w+56,hov?RGB(40,40,40):COL.elev);
+  if(w<=24) return;
   var cs=w-24;
   drawPlCover(gr,x+12,y+12,cs,6,pi,plName(pi));
   tL(gr,plName(pi),FONT.card,COL.text,x+12,y+cs+18,w-24-(hov?26:0),20);
   tL(gr,plCount(pi)+' songs',FONT.plSub,COL.text2,x+12,y+cs+40,w-24,16);
 }
 function renderPlCard(pi,w,hov){
+  if(!isFinite(w) || w<25) return null;
   var im=null;
   try{
     im=gdi.CreateImage(w,w+56); var g=im.GetGraphics();

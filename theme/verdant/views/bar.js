@@ -44,6 +44,15 @@ function drawBar(gr){
   drawIcon(gr,'expand',hv(fsx-8,gearC-16,fsx+30,gearC+16)?COL.text:COL.text2,fsx,gearC-13,26,26,22);
   HB_CTRL.push({x0:fsx-8,y0:gearC-16,x1:fsx+30,y1:gearC+16,act:'fullscreen'});
   var volW=104, volX=fsx-24-volW, volY=gearC-2;
+  // One icon to the left of volume (EOLE-style Output / DSP submenu).
+  // Hide on narrow layouts rather than overlap Repeat or Volume.
+  HB_AUDIO=[];
+  var audioX=volX-78, audioY=gearC-18;
+  if(audioX>=cxC+138){
+    var ah=36, ahov=hv(audioX,audioY,audioX+36,audioY+ah);
+    drawIcon(gr,'audioSettings',(ahov||audioPopup)?COL.text:COL.text2,audioX,audioY,36,ah,22);
+    HB_AUDIO.push({x0:audioX,y0:audioY,x1:audioX+36,y1:audioY+ah});
+  }
   drawIcon(gr,'volume',COL.text2,volX-32,gearC-13,26,26,22);
   HB_VOL=drawTrackBar(gr,volX,volY,volW,5,COL.seekbg,clamp01(vol2pos(fb.Volume)));
 }

@@ -8,7 +8,7 @@ var lyScroll=0, lyTarget=0, lyCur=0, lyTimer=null, lySnap=true, lyLay={lyr:null,
 var lyStScroll=0, lyStMax=0;   // unsynced lyrics: wheel-driven offset + its clamp, both in pixels
 function currentLyricLine(){
   if(!lyrics || lyrics==='none' || !lyrics.synced) return 0;
-  var pt=fb.PlaybackTime, c=0;
+  var pt=fb.PlaybackTime, c=-1;
   for(var i=0;i<lyrics.lines.length;i++){ if(lyrics.lines[i].t<=pt) c=i; else break; }
   return c;
 }
@@ -32,7 +32,7 @@ function lyLayout(gr,maxW,font){
 function drawRollingLyrics(gr,x,top,w,bot,font,curCol,align){
   var viewMid=Math.round((top+bot)/2), L=lyLayout(gr,w,font), subLh=L.subLh, li,s;
   lyCur=currentLyricLine();
-  lyTarget=L.cen[lyCur]||0;
+  lyTarget=L.cen[Math.max(0,lyCur)]||0;
   if(lySnap){ lyScroll=lyTarget; lySnap=false; } else if(Math.abs(lyTarget-lyScroll)>0.5) startLyAnim();
   for(li=0;li<lyrics.lines.length;li++){
     var bcY=viewMid+(L.cen[li]-lyScroll);
@@ -96,7 +96,7 @@ function stopLyAnim(){ if(lyTimer){ window.ClearInterval(lyTimer); lyTimer=null;
 var caretOn=true, caretTimer=null;
 function caretTick(){
   if(renameEdit){ caretOn=!caretOn; repaintAll(); return; }              // caret sits in a playlist row/card
-  if(view==='search'){ caretOn=!caretOn; markDirty(); dirtySearch=true; var b=searchBoxRect(); window.RepaintRect(b.x,b.y,b.w,b.h); return; }
+  if(editInputActive()){ caretOn=!caretOn; markDirty(); dirtySearch=true; var b=searchBoxRect(); window.RepaintRect(b.x,b.y,b.w,b.h); return; }
   stopCaret();
 }
 function startCaret(){ if(!caretTimer){ caretOn=true; caretTimer=window.SetInterval(caretTick,530); } }
@@ -108,24 +108,61 @@ function readFirst(paths){
   return null;
 }
 function parseLyrics(text){
-  var raw=text.split(/\r?\n/), lines=[], synced=false, reAll=/\[(\d+):(\d+(?:\.\d+)?)\]/g, i, j, m;
+  // Embedded USLT/SYLT tags and external LRC text share this parser.
+  var raw=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/),lines=[],synced=false;
+  var reAll=/\[(\d+):(\d+(?:[.:]\d+)?)\]/g, offset=0,i,j,m;
   for(i=0;i<raw.length;i++){
-    var line=raw[i], times=[]; reAll.lastIndex=0;
-    while((m=reAll.exec(line))!==null){ times.push(parseInt(m[1],10)*60+parseFloat(m[2])); }
+    var line=raw[i],om=/^\s*\[offset:([+-]?\d+)\]\s*$/i.exec(line);
+    if(om){ offset=parseInt(om[1],10)||0; continue; }
+    var times=[]; reAll.lastIndex=0;
+    while((m=reAll.exec(line))!==null){
+      var seconds=parseInt(m[1],10)*60+parseFloat(m[2].replace(':','.'))+offset/1000;
+      times.push(Math.max(0,seconds));
+    }
     var txt=line.replace(reAll,'').trim();
+    if(/^\s*\[[a-zA-Z#]+:/.test(txt)) continue;
     if(times.length){ synced=true; for(j=0;j<times.length;j++) lines.push({t:times[j],text:txt}); }
-    else { if(/^\s*\[[a-zA-Z#]+:/.test(line)) continue; lines.push({t:-1,text:txt}); }
+    else if(txt.length) lines.push({t:-1,text:txt});
   }
-  if(synced) lines.sort(function(a,b){ return a.t-b.t; });
-  return {lines:lines, synced:synced};
+  if(synced){
+    // In timed lyrics, untimed lines cannot be synchronized reliably.
+    lines=lines.filter(function(line){return line.t>=0;});
+    lines.sort(function(a,b){ return a.t-b.t; });
+  }
+  return {lines:lines,synced:synced};
+}
+/* Direct file-info lookup works with standard LYRICS as well as various
+   SYNCEDLYRICS/UNSYNCEDLYRICS spellings written by taggers. */
+function embeddedLyrics(handle){
+  if(!handle) return null;
+  try{
+    var info=handle.GetFileInfo(true); if(!info) return null;
+    var fields=['SYNCED LYRICS','SYNCEDLYRICS','SYNCED_LYRICS','LYRICS','UNSYNCED LYRICS','UNSYNCEDLYRICS','UNSYNCED_LYRICS'],i,k,v,found=[];
+    for(i=0;i<fields.length;i++){
+      k=info.MetaFind(fields[i]);
+      if(k<0) continue;
+      for(var j=0;j<info.MetaValueCount(k);j++){
+        v=info.MetaValue(k,j); if(v && v.trim()) found.push(v);
+      }
+    }
+    // Prefer timestamped values over plain text, regardless of which field held them.
+    for(i=0;i<found.length;i++) if(/\[\d+:\d+(?:[.:]\d+)?\]/.test(found[i])) return found[i];
+    return found.length?found[0]:null;
+  }catch(e){ return null; }
 }
 function loadLyrics(){
-  var key=NP?NP.Path:null;
+  var key=NP?(NP.Path+'|'+NP.SubSong):null;
   if(key===lyricsFor) return;
-  lyricsFor=key; lyrics='none'; lyScroll=0; lyTarget=0; lySnap=true; lyLay={lyr:null,w:-1};
-  lyStScroll=0; lyStMax=0;   // a new track's lyrics start at the top
-  if(!key) return;
-  var base=key.replace(/\.[^.\\\/]+$/,'');
-  var text=readFirst([base+'.lrc', base+'.txt']);
-  if(text) lyrics=parseLyrics(text);
+  lyricsFor=key; lyrics='none'; lyScroll=0; lyTarget=0; lySnap=true; lyLay={lyr:null,w:-1};
+  lyStScroll=0; lyStMax=0;
+  if(!NP) return;
+  var base=NP.Path.replace(/\.[^.\\\/]+$/,'');
+  var sideLrc=readFirst([base+'.lrc']),tagged=embeddedLyrics(NP),sideTxt=null;
+  // Prefer synced embedded data, then synced sidecar .lrc, then plain embedded data,
+  // and finally sidecar .txt. External .lrc remains supported exactly as before.
+  var taggedParsed=tagged?parseLyrics(tagged):null;
+  if(taggedParsed && taggedParsed.synced && taggedParsed.lines.length) lyrics=taggedParsed;
+  else if(sideLrc){ var parsed=parseLyrics(sideLrc); if(parsed.lines.length) lyrics=parsed; }
+  if(lyrics==='none' && taggedParsed && taggedParsed.lines.length) lyrics=taggedParsed;
+  if(lyrics==='none'){ sideTxt=readFirst([base+'.txt']); if(sideTxt){ var plain=parseLyrics(sideTxt); if(plain.lines.length) lyrics=plain; } }
 }

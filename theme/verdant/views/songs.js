@@ -13,26 +13,28 @@ function drawSongs(gr,r){
   var cov=libChoice(), g=songsGroup;
   // header: gradient wash + mosaic cover + title/meta, mirroring the playlist header
   gr.FillGradRect(r.x,r.y,r.w,SHEAD,90,blend(artHue(cov.single,'__lib__'),COL.base,0.42),COL.base,1.0);
-  var rx=r.x+r.w-M.cpad, lx=r.x+M.cpad, ay=r.y+44, art=M.artSz;
+  var compact=r.w<1080;
+  var rx=r.x+r.w-M.cpad, lx=r.x+M.cpad, ay=r.y+(compact?22:44), art=compact?Math.max(72,Math.min(120,Math.round(r.w*0.22))):M.artSz;
   drawLibCover(gr,lx,ay,art,8);
-  // header text stops short of the pill column so the two can never collide on a narrow panel
-  var gpW=232, pgap=8, nzW=Math.max(196,Math.round(gr.CalcTextWidth('Normalize volume',FONT.pl))+72);
-  var clW=nzW+pgap+gpW, clX=Math.max(lx+art+24,rx-clW), gpX=clX+nzW+pgap;
-  var tx=lx+art+24, tw=Math.max(120,clX-12-tx);
+  // With compact Queue open, the visible right edge is its LEFT side.
+  // Size both pills to that actual width, rather than allowing Group to hide beneath Queue.
+  var shownRight=(W<1180&&compactQueueOpen&&R.queueW)?Math.min(rx,R.queue.x-M.gap-M.cpad):rx;
+  var compactAvail=Math.max(200,shownRight-lx);
+  var pgap=8;
+  var gpW=compact?Math.max(115,Math.floor((compactAvail-pgap)*0.46)):232;
+  var nzW=compact?Math.max(100,compactAvail-gpW-pgap):Math.max(196,Math.round(gr.CalcTextWidth('Normalize volume',FONT.pl))+72);
+  var clW=nzW+pgap+gpW, clX=compact?lx:Math.max(lx+art+24,rx-clW), gpX=clX+nzW+pgap;
+  var tx=lx+art+(compact?14:24);
+  var tw=compact?Math.max(30,rx-tx):Math.max(30,clX-12-tx);
   tL(gr,'LIBRARY',FONT.eyebrow,COL.text,tx,ay+6,tw,18);
-  tL(gr,'All Songs',FONT.title,COL.text,tx,ay+28,tw,84);
-  tL(gr,fmtNum(songsTracks.length)+' songs'+(songsTotalSec>0?(' '+CH_DOT+' '+fmtDur(songsTotalSec)):''),FONT.meta,COL.text2,tx,ay+150,tw,22);
-  HB_RGNORM=drawNormalizePill(gr,clX,ay+142,nzW,38);
-  HB_SG=drawDropPill(gr,gpX,ay+142,gpW,38,'Group: '+labelOf(SONGS_GROUPS,songsGroup,'No grouping'),sgMenuOpen);
-  // one line of truth under the pill: what normalizing has left to do, or what it's currently doing
-  if(rgStat && rgStat.total>0){
-    var nzCap=rgScanFailed ? "Couldn't start foobar's ReplayGain scanner"
-            : (rgStat.missing.length ? (fmtNum(rgStat.scanned)+' of '+fmtNum(rgStat.total)+' tracks scanned')
-            : ('All tracks scanned  '+CH_DOT+'  normalizing '+(rgModeOn()?'on':'off')));
-    tL(gr,nzCap,FONT.plSub,rgScanFailed?RGB(240,96,96):COL.text3,clX+2,ay+186,Math.min(clW,rx-clX)-4,18);
-  }
+  tL(gr,'All Songs',fitHeaderFont(gr,'All Songs',tw),COL.text,tx,ay+28,tw,compact?52:84);
+  tL(gr,fmtNum(songsTracks.length)+' songs'+(songsTotalSec>0?(' '+CH_DOT+' '+fmtDur(songsTotalSec)):''),FONT.meta,COL.text2,tx,ay+(compact?96:150),tw,22);
+  // Raise compact controls to avoid sitting flush against the list/header seam.
+  var pillY=compact?r.y+SHEAD-106:ay+142;
+  HB_RGNORM=drawNormalizePill(gr,clX,pillY,nzW,38);
+  HB_SG=drawDropPill(gr,gpX,pillY,gpW,38,'Group: '+labelOf(SONGS_GROUPS,songsGroup,'No grouping'),sgMenuOpen);
 
-  if(!songsRows.length){
+  if(!songsRows.length && !inlineFilterActive()){
     tC(gr,'Nothing in your library yet',FONT.sect,COL.text2,r.x,r.y+SHEAD+40,r.w,24);
     tC(gr,'Add a music folder via Library '+CH_BULL+' Configure.',FONT.qArtist,COL.text3,r.x,r.y+SHEAD+70,r.w,18);
     return;
@@ -51,6 +53,12 @@ function drawSongs(gr,r){
   var titleW=(colW?colX:rx-durW)-cgap-titleX;
 
   var listTop=r.y+SHEAD+8;
+  if(inlineFilterActive())listTop+=62;
+  if(!songsRows.length && inlineFilterActive()){
+    drawInlineFilterBox(gr,r);
+    tC(gr,'No matching tracks',FONT.sect,COL.text2,r.x,r.y+SHEAD+105,r.w,26);
+    return;
+  }
   var rowsTop=listTop+34, cropY=r.y+r.h, viewH=cropY-rowsTop;
   var contentH=songsContentH, maxPx=Math.max(0,contentH-viewH);
   SONGS_MAXPX=maxPx;
@@ -77,7 +85,8 @@ function drawSongs(gr,r){
     if(row.k==='t'){
       var t=row.t, isPlaying=!!(NP && t.h && t.h.Path===NP.Path);
       var isHover=hv(lx-8,vy0,rx+8,vy1);
-      if(isHover) gr.FillRoundRect(lx-8,ry,rx-lx+16,gh,4,4,COL.rowHover);
+      if(isTrackSelected({songs:true,ti:row.ti})) gr.FillRoundRect(lx-8,ry,rx-lx+16,gh,4,4,COL.rowActive);
+      else if(isHover) gr.FillRoundRect(lx-8,ry,rx-lx+16,gh,4,4,COL.rowHover);
       if(isHover) drawIcon(gr,'play',COL.text,numX,ry,numW,gh,14);
       else tR(gr,String(row.n),FONT.rowNum,isPlaying?COL.green:COL.text2,numX,ry,numW-8,gh);
       if(flat){
@@ -130,5 +139,5 @@ function drawSongs(gr,r){
   drawIcon(gr,'clock',COL.text2,rx-16,listTop,16,20,15);
   gr.DrawLine(lx,listTop+26,rx,listTop+26,1,COL.line);
   drawScrollbar(gr,rx+8,rowsTop,viewH,songsScroll,maxPx,viewH,contentH,hv(r.x,r.y,r.x+r.w,cropY)||drag==='scroll');
-  drawGroupMenu(gr);
+  if(inlineFilterActive())drawInlineFilterBox(gr,r); // after the sticky overpaint mask
 }

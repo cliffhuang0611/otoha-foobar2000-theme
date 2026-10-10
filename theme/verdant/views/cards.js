@@ -7,6 +7,7 @@
    Edge cards are therefore blitted through a bitmap with a source rect instead of being drawn
    wide and masked over afterwards. Hover and hit target clip to the same band. */
 function drawPlaylistCard(gr,x,y,w,i,clipL,clipR){
+  if(!isFinite(w) || w<25) return;
   var h=w+56;
   var hx0=(clipL!==undefined&&x<clipL)?clipL:x, hx1=(clipR!==undefined&&x+w>clipR)?clipR:x+w;
   if(hx1<=hx0) return;
@@ -20,7 +21,11 @@ function drawPlaylistCard(gr,x,y,w,i,clipL,clipR){
   HB_CARD.push({x0:hx0,y0:y,x1:hx1,y1:y+h,kind:'pl',id:i});
 }
 function paintArtistCard(gr,x,y,w,a,hov){
-  gr.FillRoundRect(x,y,w,w+56,8,8,hov?RGB(40,40,40):COL.elev);
+  if(!isFinite(w) || w<1) return;
+  var r=Math.min(8,Math.floor(w/2));
+  if(r>0) gr.FillRoundRect(x,y,w,w+56,r,r,hov?RGB(40,40,40):COL.elev);
+  else gr.FillSolidRect(x,y,w,w+56,hov?RGB(40,40,40):COL.elev);
+  if(w<=24) return;
   var cs=w-24;
   drawCircle(gr,x+12,y+12,cs,artistCover(a.name,a.handle),a.name);
   tC(gr,a.name,FONT.card,COL.text,x+12,y+cs+18,w-24,20);
@@ -46,6 +51,7 @@ function evictArtCards(){
   artCardN=keys.length-n;
 }
 function artCardImg(a,w){
+  if(!isFinite(w) || w<25) return null;
   var key=a.name+'|'+w, e=artCardCache[key];
   if(e){ e.t=++artTick; return e.img; }
   var ah=artistCover(a.name,a.handle);
@@ -63,6 +69,7 @@ function artCardImg(a,w){
   artCardCache[key]={img:im,t:++artTick}; artCardN++; return im;
 }
 function drawArtistCard(gr,x,y,w,a,clipTop,clipBot){
+  if(!isFinite(w) || w<25) return;
   var h=w+56;
   // clip drawing and the click target to the scroll viewport
   var vy0=(clipTop!==undefined&&y<clipTop)?clipTop:y, vy1=(clipBot!==undefined&&y+h>clipBot)?clipBot:y+h;
@@ -72,6 +79,16 @@ function drawArtistCard(gr,x,y,w,a,clipTop,clipBot){
   // angle/alpha omitted on purpose: passing them takes GdiGraphics' transform+colour-matrix path,
   // which is far slower than the plain blit these 1:1 draws need
   if(im) gr.DrawImage(im,x,vy0,w,vy1-vy0,0,vy0-y,w,vy1-vy0);
-  else paintArtistCard(gr,x,y,w,a,hov);
+  else {
+    // Avoid drawing outside the scroll viewport when artwork has not been cached yet.
+    var temp=null, tg=null;
+    try {
+      temp=gdi.CreateImage(w,h); tg=temp.GetGraphics();
+      tg.FillSolidRect(0,0,w,h,COL.base);
+      paintArtistCard(tg,0,0,w,a,hov);
+      temp.ReleaseGraphics(tg); tg=null;
+      gr.DrawImage(temp,x,vy0,w,vy1-vy0,0,vy0-y,w,vy1-vy0);
+    } catch(e) { if(tg && temp) try{ temp.ReleaseGraphics(tg); }catch(ignore){} }
+  }
   HB_CARD.push({x0:x,y0:vy0,x1:x+w,y1:vy1,kind:'artist',id:a.name});
 }
