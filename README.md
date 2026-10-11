@@ -2,7 +2,7 @@
 
 # Verdant
 
-### A modern Spotify-style theme for foobar2000
+### A personal fork of the Spotify-style theme for foobar2000
 
 *A foobar2000 skin that turns the world's most configurable audio player into something
 that looks like a modern streaming app.*
@@ -12,7 +12,7 @@ that looks like a modern streaming app.*
 ![foobar2000](https://img.shields.io/badge/foobar2000-v2%20·%2064--bit-1DB954)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-1DB954)
 
-**Four-step install. No components to hunt down. No fonts to install.**
+**Personal customizations live on `personal`; `master` retains the upstream theme.**
 
 <img src="docs/images/home.png" alt="Verdant home view: playlist shelf, artist grid and queue" width="900">
 
@@ -30,6 +30,145 @@ foobar2000 widgets are involved, which is why it looks nothing like default foob
 
 It does **not** connect to Spotify's service and plays nothing you don't already own — it's a
 look, not a client.
+
+---
+
+## Personal fork: changes from `master`
+
+This fork builds on [superziper/verdant-foobar2000-theme](https://github.com/superziper/verdant-foobar2000-theme).
+The features below describe the current `personal` branch compared with the local `master` branch.
+The release badges, release downloads, and screenshots in this README belong to upstream; those downloads
+and images do not include these personal changes. Original features such as shuffle, fullscreen,
+visualizers, cover mosaics, and ReplayGain remain available.
+
+### Home and responsive layout
+
+- **Artist Grid/List toggle** beside **Artists in your library**. The heading and controls scroll
+  with the section, then stick to the top. The view choice is saved in panel properties.
+- **Your Playlists always stays a horizontal card shelf**, regardless of the artist display mode.
+  The shelf reserves the vertical scrollbar gutter, including its click targets.
+- **One shared vertical scroll offset** across Grid/List: toggling retains the visible pixel position,
+  clamped to the new layout's maximum. The playlist shelf keeps its horizontal position too.
+- **Resizable playlist sidebar**: drag its right-hand gap. The saved width is limited to leave room
+  for the main content. Truncated playlist names show full-name hover tooltips in the sidebar and Home.
+- **Compact queue controls**: narrow windows can expand/collapse the queue. The expanded queue
+  occupies its own layout space so it cannot cover main scrollbars. Expand is near the main panel's
+  right edge; Collapse is inside the queue, below the tabs when space is especially tight.
+- Responsive headings, search/filter fields, sorting/grouping controls, and menus accommodate
+  smaller windows. Custom flyouts paint above other content; track menus close on outside clicks,
+  Escape, or focus loss. Clicking the top menu bar also dismisses an open context menu.
+
+### Playlists and track selection
+
+- **Default sorting preserves foobar2000's stored playlist order**, including imported M3U8 order.
+  Title/Artist/Album sorting changes the display only. The direction button keeps its space but is
+  disabled for Default; the previous direction is remembered for named sorts.
+- **Windows-style track selection**: Ctrl-click toggles individual tracks; Shift-click selects ranges;
+  Ctrl+Shift-click adds ranges. Arrow-key selection uses the current displayed order. Duplicate
+  entries can be selected independently. Modified double-clicks do not start playback.
+- **Track clipboard**: Ctrl+C copies selected tracks from playlists, All Songs, artist, album, and
+  Search views in displayed order, preserving duplicates. Ctrl+X cuts only from editable playlists,
+  after a successful clipboard copy. Ctrl+V appends to the open editable playlist. Audio files are
+  unchanged by cut/paste. The clipboard uses foobar2000's native track format.
+- Track right-click menus provide Add to playlist (existing or new), Add to playback queue,
+  Open containing folder, Properties, Delete files, and playlist removal where applicable.
+  **Show more options** opens foobar2000's full native track menu, including installed File Operations
+  and Converter commands/presets for the selected tracks.
+- **Playlist context menu** on sidebar/Home playlist cards and the playlist heading or empty area,
+  grouped in this order:
+
+  ```text
+  Add files…
+  Add folder…
+  Paste tracks
+  ────────────────────
+  Remove duplicates
+  Remove missing files
+  ────────────────────
+  Save playlist…
+  Duplicate playlist
+  ────────────────────
+  Rename…
+  Clear playlist…
+  Delete playlist…
+  ```
+
+  Remove duplicates keeps the first occurrence of each file/subsong in stored playlist order;
+  it does not match by title or artist. Remove missing files checks local paths and skips streams.
+  Cleanup reports the number removed and creates a playlist undo backup. Clear requires confirmation
+  and keeps the playlist; Delete requires confirmation and removes the playlist. Neither deletes
+  audio files. Editing actions are disabled for locked/automatic playlists; Paste is disabled when
+  no supported clipboard content is available.
+- **Save playlist** uses foobar2000's native export dialog. Display sorting does not change the
+  exported sequence. Exporting does not establish an automatic link to overwrite an imported M3U8.
+- Playlist creation and rename shortcuts, plus caret/selection/clipboard editing in the rename dialog.
+- **Confirmed file deletion** is distinct from playlist removal. Library Delete, playlist Shift+Delete,
+  and the track menu's Delete files action ask before invoking foobar2000's File Operations command.
+  After files disappear, Verdant refreshes its cached library, Search, artist, and album views.
+  Foobar2000's underlying library still relies on folder monitoring or a native rescan.
+
+### Search, metadata, lyrics, and audio controls
+
+- Search includes **artists, albums, and tracks**, with an album detail page.
+- Multi-token track matching across title, artist, album artist, and album, including partial words
+  and limited typo tolerance. Ctrl+F filters All Songs and playlists without modifying their contents;
+  in other views it opens global Search.
+- Search/filter fields support mouse caret placement, text selection, word movement, and clipboard
+  editing. Selected text takes priority for Ctrl+C; otherwise selected tracks can be copied.
+- Artist and album tracks use **DISCNUMBER then TRACKNUMBER** order; missing numbers display blank.
+- Lyrics support adjacent `.lrc` / `.txt` files and embedded lyrics fields, including synchronized
+  highlighting and scrolling; plain lyrics can be scrolled in the queue pane.
+- One icon beside volume opens **output-device and saved DSP-preset** selectors, with active choices,
+  scrolling flyouts, and explicit switching. Unsupported host APIs are handled with a message.
+- ReplayGain status is a **hover tooltip** instead of a permanent heading line. It reports tagged
+  tracks and remaining unscanned tracks, rather than live scanner progress. Tiny progress values
+  use safe drawing geometry for JSplitter 3.8.12.
+
+### Keyboard shortcuts
+
+These shortcuts work when Verdant has keyboard focus, unless a foobar2000 shortcut intercepts them.
+
+| Shortcut | Action |
+|---|---|
+| Up / Down | Select previous/next displayed track and reveal it |
+| Shift+Up/Down | Extend or shrink the anchored selection |
+| Ctrl+Up/Down | Add the previous/next track to the selection |
+| Ctrl+Shift+Up/Down | Extend a range while keeping other selected tracks |
+| Ctrl+A / Ctrl+Shift+A | Select all visible tracks / clear selection |
+| Enter | Play first selected track and queue the rest in displayed order |
+| Shift+Enter | Queue selected tracks without starting playback |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy tracks / cut playlist entries / append clipboard tracks |
+| Delete | Remove selected playlist entries; with none selected, confirm deleting the open playlist. On selected library tracks, confirm file deletion |
+| Shift+Delete | Confirm file deletion for selected tracks, including playlist tracks |
+| Ctrl+N | Create and open a playlist |
+| F2 | Rename the open playlist |
+| Page Up / Page Down | Scroll the current page |
+| Home / End | Scroll to the top / bottom |
+| Alt+Left / Alt+Right | Navigate page history |
+| Ctrl+L | Open global Search |
+| Ctrl+F | Filter the current playlist/All Songs, or open Search |
+| Escape | Close a menu/filter, return from Search, or clear track selection |
+| F5 | Refresh cached view data; does not rescan folders or reload scripts |
+| Ctrl+F5 | Reload JSplitter scripts |
+| Ctrl+R | Reserved for a native library rescan hotkey that you assign in foobar2000 |
+
+Text fields retain their editing shortcuts. Selected track results take priority for Delete;
+selected Search/filter text takes priority for Ctrl+C. Rename remains a modal text editor.
+See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional details.
+
+### Compatibility and known limitations
+
+- The personal setup uses **foobar2000 v2 (64-bit), Columns UI, and JSplitter 3.8.12**.
+  Native file operations and conversion options depend on installed foobar2000 components.
+- Remove conflicting foobar2000 hotkeys if they intercept panel keys, particularly the native
+  Ctrl+F Search assignment. Bind Ctrl+R to your preferred native rescan command yourself.
+- Panel keyboard focus at startup is host-dependent; click Verdant if shortcuts are not received.
+  Optional `Verdant: …` menu commands register only when the host supports that API; assigning
+  application-wide shortcuts is manual.
+- Japanese input works in the inline fields, but Windows IME composition/candidates may appear
+  near the primary monitor's top-left corner. This fork keeps inline editing rather than adding
+  a separate input dialog or native panel.
+- Mouse Back/Forward buttons are not remapped by this theme. No AutoHotkey helper is included.
 
 ---
 
@@ -58,13 +197,13 @@ look, not a client.
 
 ## Features
 
-- **Home** — a horizontal shelf of your playlists with 2×2 cover mosaics, above a grid of every
-  artist in your library.
+- **Home** — a horizontal playlist card shelf above a grid or list of library artists, with a sticky
+  artist heading and display controls.
 - **Playlist view** — gradient header tinted from the cover art, sortable by title / artist / album,
   inline rename, delete, and drag-and-drop import **with duplicate detection**.
 - **All Songs** — your entire library in one virtualised list, optionally grouped by artist, album,
   or both. Handles thousands of tracks without stuttering.
-- **Search** — instant, across artists and tracks, as you type.
+- **Search** — artists, albums, and tracks, with album pages and multi-token/fuzzy track matching.
 - **Queue / Lyrics pane** — what's actually playing next (real playback queue *and* "next from"),
   or synced `.lrc` / plain `.txt` lyrics that roll with the track. Click any queue row to jump to it.
 - **Fullscreen mode** — big now-playing art, rolling lyrics, or an FFT audio visualizer fed from
@@ -78,6 +217,20 @@ look, not a client.
 ---
 
 ## Install
+
+### Use this personal fork
+
+Upstream release ZIPs install the original theme. To use these customizations, first set up an
+upstream Verdant installation using the instructions below, then use the `personal` branch of this
+repository and copy **the contents of `theme/verdant/`** into your existing `<profile>\verdant\`
+directory. Back up that directory first. Update theme source files only; keep your existing
+foobar2000 profile settings and layout configuration.
+
+For a standard install the destination is `%APPDATA%\foobar2000-v2\verdant\`; for a portable
+install it is `<foobar2000 root>\profile\verdant\`. Reload JSplitter with Ctrl+F5 after copying.
+No npm build, bundler, or DLL compilation is required for ordinary theme changes.
+
+### Upstream base installation
 
 1. Install foobar2000 as **portable** from the [official website](https://www.foobar2000.org/download).
 2. Download **`Verdant-vX.Y.Z.zip`** from the
@@ -123,23 +276,25 @@ Run `uninstall.ps1` from `<profile>\verdant-backup\<date>\`, then delete `<profi
 > fresh foobar has an empty library, so add a music folder under Preferences → **Media Library**.
 > That's expected, not a broken install.
 
-Lyrics are read from a `.lrc` (synced) or `.txt` (plain) file sitting next to the audio file, with the
-same name.
+Lyrics are read from a `.lrc` (synced) or `.txt` (plain) file next to the audio file with the
+same name, or from supported embedded lyrics fields.
 
 ---
 
 ## Tuning
 
-Right-click the panel → **Properties**:
+Right-click an empty area outside the playlist view → **Panel properties** (the JSplitter menu):
 
 | Property | Default | What it does |
 |---|---|---|
 | `Display: UI scale (0 = auto)` | `0` | Scales every font and the title bar. `0` follows your display scaling; set `1.0` for a compact look, higher for a large or 4K screen. |
+| `Sidebar: width` | `190` | Preferred sidebar width in pixels; updated when you drag its right-hand gap and constrained by window size. |
+| `Home: view (grid \| list)` | `grid` | Artist display mode; updated by the buttons beside Artists in your library. Playlists always remain cards. |
 | `Scrolling: wheel step (px)` | `180` | How far one wheel notch scrolls the lists. |
 
-Both are read when the panel loads — **reload the panel** (right-click → Reload) after changing them.
-
-Sidebar and queue-pane widths are still code: `M.navW` / `M.queueW` in
+Manual property edits take effect on panel reload (**Ctrl+F5** or JSplitter → **Reload**).
+Dragging the sidebar or using the artist display buttons applies and saves those settings immediately.
+Queue width and the default sidebar width remain in
 [`theme/verdant/core/tokens.js`](theme/verdant/core/tokens.js).
 
 ---
@@ -154,7 +309,8 @@ Under the hood this is **ReplayGain**, which is two separate things — and the 
 2. **Playback applying that measurement** (foobar's ReplayGain source mode).
 
 The pill turns **green only when both are true**, so it can never claim to be on while doing nothing.
-The line underneath tells you where you stand — e.g. `1,204 of 3,000 tracks scanned`.
+Hover the button to see the tagged-track count and remaining unscanned tracks. This status is not
+a live progress report from the native scanner.
 
 | State | Clicking it |
 |---|---|
@@ -195,8 +351,10 @@ Verdant is a full visual replacement — layout, colours, fonts, every control �
 so you can switch back at Preferences → Display → Columns UI → Layout. If you installed with
 `install.bat`, your previous layout is also backed up and restorable.
 
-**Is my music library safe?** Verdant never touches your audio files. The one feature that writes
-anything is *Normalize volume*, which asks first and writes only ReplayGain tags.
+**What actions affect audio files?** Playlist cleanup, clearing, deletion, and cut/paste affect
+playlist entries only. File deletion explicitly asks for confirmation and delegates to foobar2000.
+Normalize volume writes ReplayGain tags after confirmation. Commands under Show more options
+can rename, move, convert, or otherwise modify files through foobar2000’s native tools.
 
 **It looks huge / tiny on my screen.** Set `Display: UI scale` in the panel properties — see
 [Tuning](#tuning).
@@ -240,6 +398,26 @@ pass `-FoobarProfile`.
 Then reload the panel (right-click → Reload). `console.log` goes to foobar's console (View → Console).
 Deploy copies the same folder to the same place the installer does, so there's no separate build and
 no second code path.
+
+### Personal branch workflow in WSL
+
+Work on `personal` and keep `master` as the upstream reference. Source changes are loaded directly
+by JSplitter. Before deploying:
+
+```bash
+git status --short
+find theme/verdant -name '*.js' -print0 | xargs -0 -n1 node --check
+git diff --check
+```
+
+If your checkout has the optional local WSL helpers, `./tools/local/deploy.sh --backup` backs up
+and copies the theme into your configured foobar2000 profile. Later deployments can use
+`./tools/local/deploy.sh`. These helpers may be ignored/local-only and are not required; copying
+the source directory or using the upstream PowerShell deployment script also works.
+
+Reload with **Ctrl+F5** and test in Windows foobar2000. Node syntax checks do not validate JSplitter
+APIs, GDI rendering, focus handling, or IME behavior. **F5** refreshes view data only and does not
+load edited script files.
 
 ---
 
