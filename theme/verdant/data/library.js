@@ -23,7 +23,19 @@ function visiblePlaylists(){
    invalidateLibrary() clears them alongside everything else derived from the library. */
 var libItems_=null, libTFCache={};
 function libItems(){
-  if(libItems_===null){ try{ libItems_=fb.GetLibraryItems(); }catch(e){ libItems_=null; } }
+  if(libItems_===null){
+    try{
+      libItems_=fb.GetLibraryItems();
+      // Foobar's folder monitor may lag behind a confirmed file operation.
+      for(var i=libItems_.Count-1;i>=0;i--){
+        var path=libItems_[i].Path;
+        if(missingLibraryFiles[path]){
+          if(localFileExists(path)===false)libItems_.RemoveById(i);
+          else delete missingLibraryFiles[path];
+        }
+      }
+    }catch(e){ libItems_=null; }
+  }
   return libItems_;
 }
 function libTF(field){

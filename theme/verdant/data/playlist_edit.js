@@ -113,7 +113,95 @@ function removeTrackFromPl(pl,item){
   if(playing && !wasPaused) verifyAdvanced(h);
   invalidateItems(); updateNP(); repaintAll();
 }
-function startRename(pl){ renameEdit={pl:pl, text:plman.GetPlaylistName(pl)}; ctxMenu=null; caretOn=true; startCaret(); applyKeyMode(); repaintAll(); }
+/* The rename dialog is a painted edit control, just like Verdant Search.
+   Keep caret, anchor, horizontal clipping and clipboard behavior explicitly;
+   JSplitter cannot provide Windows text editing for a GDI-drawn rectangle. */
+function startRename(pl){
+  if(pl<0 || pl>=plman.PlaylistCount) return;
+  var name=plman.GetPlaylistName(pl);
+  // Windows/Explorer F2 behavior: preselect the existing name for replacement.
+  renameEdit={pl:pl,text:name,cursor:name.length,anchor:0,viewStart:0,hit:null};
+  ctxMenu=null; caretOn=true; startCaret(); applyKeyMode(); repaintAll();
+}
+function renameSelection(){
+  return [Math.min(renameEdit.cursor,renameEdit.anchor),Math.max(renameEdit.cursor,renameEdit.anchor)];
+}
+function renameHasSelection(){return !!renameEdit && renameEdit.cursor!==renameEdit.anchor;}
+function renameReplace(text){
+  if(!renameEdit)return;
+  text=String(text||'').replace(/[\r\n\t]+/g,' ');
+  var bounds=renameSelection(),old=renameEdit.text;
+  renameEdit.text=old.slice(0,bounds[0])+text+old.slice(bounds[1]);
+  renameEdit.cursor=renameEdit.anchor=bounds[0]+text.length;
+  caretOn=true;repaintAll();
+}
+function renameMove(pos,extend){
+  if(!renameEdit)return;
+  renameEdit.cursor=Math.max(0,Math.min(renameEdit.text.length,pos));
+  if(!extend)renameEdit.anchor=renameEdit.cursor;
+  caretOn=true;repaintAll();
+}
+function renameWordLeft(pos){
+  var txt=renameEdit.text;
+  while(pos>0 && searchCharGroup(txt.charAt(pos-1))===0)pos--;
+  if(pos<=0)return 0;
+  var kind=searchCharGroup(txt.charAt(pos-1));
+  while(pos>0 && searchCharGroup(txt.charAt(pos-1))===kind)pos--;
+  return pos;
+}
+function renameWordRight(pos){
+  var txt=renameEdit.text,kind=searchCharGroup(txt.charAt(pos));
+  if(kind){while(pos<txt.length && searchCharGroup(txt.charAt(pos))===kind)pos++;}
+  while(pos<txt.length && searchCharGroup(txt.charAt(pos))===0)pos++;
+  return pos;
+}
+function renameDelete(back,word){
+  if(!renameEdit)return;
+  if(renameHasSelection()){renameReplace('');return;}
+  var pos=back?(word?renameWordLeft(renameEdit.cursor):Math.max(0,renameEdit.cursor-1))
+              :(word?renameWordRight(renameEdit.cursor):Math.min(renameEdit.text.length,renameEdit.cursor+1));
+  if(pos===renameEdit.cursor)return;
+  renameEdit.anchor=pos;renameReplace('');
+}
+function renameCopy(){
+  if(!renameHasSelection())return;
+  var b=renameSelection();
+  try{if(utils.SetClipboardText)utils.SetClipboardText(renameEdit.text.slice(b[0],b[1]));}catch(e){}
+}
+function renamePaste(){
+  try{if(utils.GetClipboardText){var v=utils.GetClipboardText();if(v)renameReplace(v);}}catch(e){}
+}
+function renameHitCursor(x){
+  if(!renameEdit || !renameEdit.hit)return renameEdit?renameEdit.text.length:0;
+  var h=renameEdit.hit,edges=h.edges;
+  if(x<=h.x)return h.start;
+  for(var i=0;i<edges.length-1;i++)if(x<h.x+(edges[i]+edges[i+1])/2)return h.start+i;
+  return h.start+edges.length-1;
+}
+function renameKeyDown(vkey,ctrl,shift,alt){
+  if(!renameEdit)return false;
+  if(vkey===27){cancelRename();return true;}
+  if(vkey===13){commitRename();return true;}
+  if(alt)return true;
+  if(ctrl){
+    if(vkey===65){renameEdit.anchor=0;renameEdit.cursor=renameEdit.text.length;caretOn=true;repaintAll();return true;}
+    if(vkey===67){renameCopy();return true;}
+    if(vkey===88){renameCopy();if(renameHasSelection())renameReplace('');return true;}
+    if(vkey===86){renamePaste();return true;}
+  }
+  if(vkey===37 || vkey===39){
+    var pos;
+    if(!shift && !ctrl && renameHasSelection())pos=vkey===37?renameSelection()[0]:renameSelection()[1];
+    else if(ctrl)pos=vkey===37?renameWordLeft(renameEdit.cursor):renameWordRight(renameEdit.cursor);
+    else pos=renameEdit.cursor+(vkey===37?-1:1);
+    renameMove(pos,shift);return true;
+  }
+  if(vkey===36){renameMove(0,shift);return true;}
+  if(vkey===35){renameMove(renameEdit.text.length,shift);return true;}
+  if(vkey===8){renameDelete(true,ctrl);return true;}
+  if(vkey===46){renameDelete(false,ctrl);return true;}
+  return true;
+}
 function commitRename(){ if(!renameEdit) return; var t=renameEdit.text.replace(/^\s+|\s+$/g,''); if(t) plman.RenamePlaylist(renameEdit.pl,t); renameEdit=null; applyKeyMode(); repaintAll(); }
 function cancelRename(){ renameEdit=null; applyKeyMode(); repaintAll(); }
 function doDeletePlaylist(pl){
@@ -170,7 +258,9 @@ function openSongMenu(handle,x,y,pl,item,entries){
   var actions=[{label:'Add to playlist',act:'destinations',submenu:true},
                {label:'Add to playback queue',act:'enqueue'},
                {label:'Open containing folder',act:'folder'},
-               {label:'Properties',act:'properties'}];
+               {label:'Properties',act:'properties'},
+               {label:'Show more options',act:'native'},
+               {label:'Delete files...',act:'deletefiles',danger:true}];
   if(pl!==undefined && canEditPl(pl)) actions.push({label:amount>1?'Remove selected tracks':'Remove from this playlist',act:'trkremove',danger:true});
   ctxMenu={kind:'song',handle:handle,entries:entries,pl:pl,item:item,x:x,y:y,items:actions,
            destinations:null,subOpen:false,subFirst:0};
@@ -187,6 +277,57 @@ function runSongContext(handles,choices){
     try{ if(fb.RunContextCommandWithMetadb(choices[j],hl,8)) return true; }catch(e){}
   }
   return false;
+}
+function openNativeSongMenu(handles,x,y){
+  try{
+    var manager=fb.CreateContextMenuManager(),popup=window.CreatePopupMenu();
+    manager.InitContext(songList(handles));
+    manager.BuildMenu(popup,1,32767);
+    var id=popup.TrackPopupMenu(x,y);
+    if(id>0){manager.ExecuteByID(id-1);watchFileOperation(handles);}
+  }catch(e){fb.ShowPopupMessage('Could not open the foobar2000 context menu: '+String(e),'Verdant');}
+}
+function promptDeleteFiles(handles){
+  if(!handles.length)return false;
+  confirmDel={kind:'files',handles:handles.slice(0)};
+  repaintAll();return true;
+}
+var fileOperationTimer=null,missingLibraryFiles=Object.create(null);
+function localFileExists(path){
+  if(!/^(?:[a-z]:\\|\\\\)/i.test(path))return null;
+  try{return !!utils.FileTest(path,'e');}catch(e){return null;}
+}
+function watchFileOperation(handles){
+  if(fileOperationTimer!==null)window.ClearTimeout(fileOperationTimer);
+  var paths=[],seen=Object.create(null),attempts=0;
+  for(var i=0;i<handles.length;i++){
+    var path=handles[i].Path;
+    if(!seen[path] && localFileExists(path)!==null){paths.push(path);seen[path]=true;}
+  }
+  if(!paths.length)return;
+  function check(){
+    fileOperationTimer=null;
+    var changed=false;
+    for(var i=paths.length-1;i>=0;i--){
+      if(localFileExists(paths[i])===false){
+        missingLibraryFiles[paths[i]]=true;paths.splice(i,1);changed=true;
+      }
+    }
+    if(changed)libChanged();
+    // Native confirmation/deletion may finish asynchronously. Cancellation leaves files visible.
+    if(paths.length && ++attempts<120)fileOperationTimer=window.SetTimeout(check,500);
+  }
+  fileOperationTimer=window.SetTimeout(check,100);
+}
+function commitDeletePrompt(){
+  if(!confirmDel)return;
+  if(confirmDel.kind!=='files'){doDeletePlaylist(confirmDel.pl);return;}
+  var handles=confirmDel.handles;
+  confirmDel=null;repaintAll();
+  // Include both menu paths and leaf names used by different component versions.
+  if(!runSongContext(handles,['File Operations/Delete file(s)','Delete file(s)','File Operations/Delete files','Delete files','Delete file']))
+    fb.ShowPopupMessage('Could not run file deletion. Use the track menu > Show more options > File Operations to choose Delete.', 'Verdant');
+  else watchFileOperation(handles);
 }
 function songDestinations(menu){
   if(menu.destinations) return menu.destinations;
@@ -220,6 +361,10 @@ function handleSongMenuAction(act,menu){
     runSongContext([menu.handle],['Open containing folder','Utilities/Open containing folder','File Operations/Open containing folder']);
   }else if(act==='properties'){
     runSongContext(handles,['Properties']);
+  }else if(act==='native'){
+    repaintAll();openNativeSongMenu(handles,menu.x,menu.y);
+  }else if(act==='deletefiles'){
+    promptDeleteFiles(handles);
   }else if(act==='trkremove'){
     if(handles.length===1) removeTrackFromPl(menu.pl,menu.item);
     else removeSelectedTracksFromPl(menu.pl,entries);

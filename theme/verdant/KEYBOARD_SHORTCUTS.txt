@@ -3,7 +3,9 @@ Verdant — keyboard shortcuts (JSplitter 3.8.12)
 When Verdant has keyboard focus:
  Page Up / Page Down      Scroll the current page
  Home / End              Jump to top / bottom
- Delete                  Remove highlighted tracks from editable playlist (never delete files)
+ Delete                  Playlist tracks selected: remove from playlist; none selected: confirm deleting playlist
+                         Library tracks selected: confirm deleting music files from disk
+ Shift+Delete            Also confirms file deletion (playlist tracks included)
  Escape                  Search: previous page (Home if none); filter: close; otherwise deselect
  Ctrl+A                  Select all tracks in the current visible/filtered results
  Ctrl+Shift+A            Clear track selection
@@ -13,6 +15,8 @@ When Verdant has keyboard focus:
  Ctrl+L                  Open Verdant global Search
  Ctrl+F                  Filter the current playlist / All Songs, or go to Search
  F5                      Refresh the current view
+ Ctrl+F5                 Reload JSplitter scripts
+ Ctrl+R                  Reserved for your foobar2000 library rescan hotkey
 
 When typing in the custom Search/filter bar, Ctrl+A, Home, End, Delete,
 Ctrl+Arrows, and other editing shortcuts keep their usual text-editing
@@ -37,7 +41,7 @@ keyboard preferences without checking the assignments first.
 
 Registered commands if supported:
  Scroll page up, Scroll page down, Scroll to top, Scroll to bottom,
- Delete selected playlist tracks, Find in current view,
+ Delete selection, Find in current view,
  Select visible tracks, Clear track selection, Play selected track,
  Queue selected tracks, Go back, Go forward, Focus global search,
  Refresh Verdant view, Leave Search / Back.
@@ -54,3 +58,7 @@ Shift+Enter       Add every selected track to the playback queue without changin
 Artist View normally scrolls by album block; keyboard navigation also reveals
 selected tracks further down long albums. The search box uses Left/Right for its text caret
 and Up/Down for song-result navigation.
+
+Track context menu: Show more options opens the full native
+track menu for the selection, including installed File Operations and Converter
+commands/presets. Delete files... always asks for confirmation in Verdant first.

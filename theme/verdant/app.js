@@ -353,6 +353,15 @@ function drawMain(gr){
 /* ------------------------- input ------------------------- */
 function seekFrac(x){ return HB_SEEK?clamp01((x-HB_SEEK.x)/HB_SEEK.w):0; }
 function applyVol(x){ if(HB_VOL){ fb.Volume=pos2vol(clamp01((x-HB_VOL.x)/HB_VOL.w)); repaintBar(); } }
+function dismissTransientMenus(){
+  ctxMenu=null;CTX_HB=[];
+  sgMenuOpen=false;plSortMenuOpen=false;vizMenuOpen=false;
+  audioClose();rgTipClear();
+  repaintAll();
+}
+function on_focus(is_focused){
+  if(!is_focused)dismissTransientMenus();
+}
 function on_mouse_lbtn_down(x,y){
   if(ctxMenu||confirmDel||renameEdit||sgMenuOpen||plSortMenuOpen||vizMenuOpen||dupPrompt||rgPrompt||audioPopup) return;   // overlays are modal; dismissal/actions handled on button-up
 
@@ -371,6 +380,10 @@ function on_mouse_lbtn_down(x,y){
 }
 function on_mouse_rbtn_up(x,y){
   rgTipClear();
+  if(ctxMenu){
+    if(!hit(CTX_HB,x,y))dismissTransientMenus();
+    return true;
+  }
   if(ctxMenu||confirmDel||renameEdit||dupPrompt||rgPrompt||audioPopup) return true;   // a modal is open: swallow
   var i;
   // Right-click inside a selection keeps every selected row. Outside it, select the clicked
@@ -511,6 +524,8 @@ function doCtrl(act){
 function on_mouse_lbtn_up(x,y){
   rgTipClear();
   var t;
+  // Let a title/menu-bar click dismiss the track menu and continue to its target.
+  if(ctxMenu && y<TBH){ctxMenu=null;CTX_HB=[];repaintAll();}
   // ---- modal overlays first ----
   if(dupPrompt){
     if(DUP_HB && inRect(x,y,DUP_HB.skip)) dupSkip(); else dupKeep();   // "Add anyway"/outside: leave as-is
@@ -521,7 +536,7 @@ function on_mouse_lbtn_up(x,y){
     rgPrompt=null; repaintAll(); return;      // cancel / click outside
   }
   if(confirmDel){
-    if(CONF_HB && inRect(x,y,CONF_HB.del)){ doDeletePlaylist(confirmDel.pl); return; }
+    if(CONF_HB && inRect(x,y,CONF_HB.del)){ commitDeletePrompt(); return; }
     confirmDel=null; repaintAll(); return;   // cancel / click outside
   }
   if(ctxMenu){
@@ -547,6 +562,13 @@ function on_mouse_lbtn_up(x,y){
   }
   if(renameEdit){
     if(RENAME_HB){
+      if(RENAME_HB.input && inRect(x,y,RENAME_HB.input)){
+        var keepAnchor=false;
+        try{keepAnchor=utils.IsKeyPressed(0x10);}catch(e){}
+        var cursor=renameHitCursor(x);
+        if(!keepAnchor)renameEdit.anchor=cursor;
+        renameEdit.cursor=cursor;caretOn=true;repaintAll();return;
+      }
       if(inRect(x,y,RENAME_HB.save)){ if(RENAME_HB.canSave) commitRename(); return; }
       if(inRect(x,y,RENAME_HB.cancel)){ cancelRename(); return; }
       if(inRect(x,y,RENAME_HB.panel)) return;     // click inside the dialog: keep it open
@@ -615,16 +637,16 @@ function on_mouse_lbtn_up(x,y){
   if(HB_HOME && inRect(x,y,HB_HOME)){ view='home'; repaintAll(); return; }
   if(HB_SEARCH && inRect(x,y,HB_SEARCH)){ view='search'; repaintAll(); return; }
   if(HB_ALLSONGS && inRect(x,y,HB_ALLSONGS)){ if(view!=='songs'){ view='songs'; songsScroll=songsScrollT=0; if(songsIdx)buildSongsRows(); } repaintAll(); return; }
-  if(HB_ADDPL && inRect(x,y,HB_ADDPL)){ var np=createNewPlaylist(); plman.ActivePlaylist=np; revealPlaylist(np); firstRow=firstRowT=0; view='playlist'; repaintAll(); return; }
+  if(HB_ADDPL && inRect(x,y,HB_ADDPL)){ keyboardCreatePlaylist(); return; }
   if(HB_PLADD_FILES && inRect(x,y,HB_PLADD_FILES)){ addFilesToPl(plman.ActivePlaylist); return; }
   if(HB_PLADD_FOLDER && inRect(x,y,HB_PLADD_FOLDER)){ addFolderToPl(plman.ActivePlaylist); return; }
   if((t=hit(HB_CARD,x,y))){
-    if(t.kind==='pl'){ plman.ActivePlaylist=t.id; firstRow=firstRowT=0; view='playlist'; }
+    if(t.kind==='pl'){ clearTrackSelection(); plman.ActivePlaylist=t.id; firstRow=firstRowT=0; view='playlist'; }
     else if(t.kind==='album'){ albumReturnView=view; loadAlbum(t.album); view='album'; }
     else { artistReturnView=view; loadArtist(t.id); view='artist'; }
     repaintAll(); return;
   }
-  if((t=hit(HB_PL,x,y))){ plman.ActivePlaylist=t.i; firstRow=firstRowT=0; view='playlist'; repaintAll(); return; }
+  if((t=hit(HB_PL,x,y))){ clearTrackSelection(); plman.ActivePlaylist=t.i; firstRow=firstRowT=0; view='playlist'; repaintAll(); return; }
   if((t=hit(HB_Q,x,y))){ if(t.q!==undefined) playQueueItem(t.q); else playQueueNext(t.pl,t.item); repaintAll(); return; }
   /* Rows play on DOUBLE click -- see on_mouse_lbtn_dblclk. The exception is the play glyph that
      replaces the track number on the hovered row: that is a button, and a button takes one click.
@@ -766,17 +788,17 @@ function on_mouse_leave(){
   hoverZoneKey='';
 }
 function on_char(code){
+  // A Ctrl+N/Ctrl+A key can emit WM_CHAR after its WM_KEYDOWN on some hosts.
+  // Never insert a stray character into either custom-drawn text editor.
+  var ctrl=false,alt=false;
+  try{ctrl=utils.IsKeyPressed(0x11);alt=utils.IsKeyPressed(0x12);}catch(e){}
   if(renameEdit){
-    if(code===8) renameEdit.text=renameEdit.text.slice(0,-1);
-    else if(code===27){ cancelRename(); return; }              // Esc = cancel
-    else if(code===13){ commitRename(); return; }              // Enter = commit
-    else if(code>=32) renameEdit.text+=String.fromCharCode(code);
-    caretOn=true; repaintAll(); return;
+    if(!ctrl&&!alt&&code>=32&&code!==127)renameReplace(String.fromCharCode(code));
+    return;
   }
   if(!editInputActive() || ctxMenu||confirmDel||dupPrompt||rgPrompt||audioPopup) return;
   // Backspace / Delete and navigation are handled on_key_down exactly once.
-  // Windows also sends control-character on_char callbacks for Ctrl+A/C/V/etc.
-  if(code>=32 && code!==127) searchReplace(String.fromCharCode(code));
+  if(!ctrl&&!alt&&code>=32&&code!==127) searchReplace(String.fromCharCode(code));
 }
 /* ---- Windows-style keyboard navigation and playback actions -----------------
    Foobar and the panel are two separate Windows keyboard focus targets. These
@@ -1039,10 +1061,42 @@ function keyboardPageScroll(vkey){
   }else return false;
   startScrollAnim();return true;
 }
-function keyboardRemoveSelected(){
-  if(view!=='playlist' || plman.ActivePlaylist<0) return false;
-  var pl=plman.ActivePlaylist, entries=selectedTrackEntries();
-  if(!entries.length) return false;
+/* Reuse the sidebar's playlist creation path so mouse and keyboard match. */
+function keyboardCreatePlaylist(){
+  if(fsMode || renameEdit || confirmDel || dupPrompt || rgPrompt || ctxMenu || audioPopup)return false;
+  var np=createNewPlaylist();
+  if(np<0)return false;
+  plman.ActivePlaylist=np;
+  revealPlaylist(np);
+  firstRow=firstRowT=0;
+  view='playlist';
+  clearTrackSelection();
+  repaintAll();
+  return true;
+}
+function keyboardRenamePlaylist(){
+  if(view!=='playlist')return false;
+  var pl=plman.ActivePlaylist;
+  if(pl<0 || pl>=plman.PlaylistCount)return false;
+  startRename(pl);return true;
+}
+function keyboardRemoveSelected(fromDisk){
+  var entries=selectedTrackEntries();
+  if(fromDisk || view!=='playlist'){
+    if(!entries.length)return false;
+    var handles=[];
+    for(var i=0;i<entries.length;i++){
+      handles.push(entries[i].handle);
+    }
+    if(!handles.length)return false;
+    return promptDeleteFiles(handles);
+  }
+  if(plman.ActivePlaylist<0)return false;
+  var pl=plman.ActivePlaylist;
+  if(!entries.length){
+    confirmDel={pl:pl,name:plman.GetPlaylistName(pl)};
+    repaintAll();return true;
+  }
   if(!canEditPl(pl)) return true;
   removeSelectedTracksFromPl(pl,entries);return true;
 }
@@ -1051,6 +1105,8 @@ function keyboardRemoveSelected(){
    global actions such as Ctrl+L can move away from an active editor. */
 function keyboardAction(action){
   if(renameEdit||ctxMenu||confirmDel||dupPrompt||rgPrompt||audioPopup||fsMode)return false;
+  if(action==='newPlaylist')return keyboardCreatePlaylist();
+  if(action==='renamePlaylist')return keyboardRenamePlaylist();
   if(action==='globalSearch')return keyboardGlobalSearch();
   if(action==='find'){startContextFind();return true;}
   if(action==='back')return navTravel(-1);
@@ -1063,6 +1119,7 @@ function keyboardAction(action){
   if(action==='playSelection')return keyboardPlaySelected();
   if(action==='queueSelection')return keyboardQueueSelected();
   if(action==='delete')return keyboardRemoveSelected();
+  if(action==='deleteFiles')return keyboardRemoveSelected(true);
   if(action==='pageUp')return keyboardPageScroll(33);
   if(action==='pageDown')return keyboardPageScroll(34);
   if(action==='home')return keyboardPageScroll(36);
@@ -1070,10 +1127,25 @@ function keyboardAction(action){
   return false;
 }
 function on_key_down(vkey){
-  if(audioPopup){ if(vkey===27)audioClose();return; }
-  if(renameEdit || ctxMenu || confirmDel || dupPrompt || rgPrompt || fsMode) return;
   var ctrl=false,shift=false,alt=false;
   try{ctrl=utils.IsKeyPressed(0x11);shift=utils.IsKeyPressed(0x10);alt=utils.IsKeyPressed(0x12);}catch(e){}
+  if(ctrl && !alt && !shift && vkey===116){
+    try{window.Reload();}catch(e){fb.ShowPopupMessage('Could not reload JSplitter: '+String(e),'Verdant');}
+    return;
+  }
+  // Ctrl+R is reserved for the user's foobar2000 rescan shortcut.
+  if(ctrl && !alt && !shift && vkey===82)return;
+  if(audioPopup){ if(vkey===27)audioClose();return; }
+  if(renameEdit){renameKeyDown(vkey,ctrl,shift,alt);return;}
+  if(confirmDel){
+    if(vkey===27){confirmDel=null;repaintAll();}
+    else if(vkey===13 && !ctrl && !alt && !shift)commitDeletePrompt();
+    return;
+  }
+  if(ctxMenu){if(vkey===27)dismissTransientMenus();return;}
+  if(dupPrompt || rgPrompt || fsMode)return;
+  if(ctrl && !alt && !shift && vkey===78){keyboardAction('newPlaylist');return;} // Ctrl+N
+  if(!ctrl && !alt && !shift && vkey===113){keyboardAction('renamePlaylist');return;} // F2
   if(!alt && ctrl && vkey===70){keyboardAction('find');return;}
   if(!alt && ctrl && vkey===76){keyboardAction('globalSearch');return;}
   if(alt && !ctrl && !shift && (vkey===37||vkey===39)){
@@ -1096,6 +1168,9 @@ function on_key_down(vkey){
   if(!alt && !ctrl && vkey===13 && trackSel.count){
     if(keyboardAction(shift?'queueSelection':'playSelection'))return;
   }
+  // Search is always considered an editor, even after a result was selected.
+  // Selected tracks take priority for Delete; otherwise keep normal text editing.
+  if(!alt && !ctrl && vkey===46 && trackSel.count){keyboardRemoveSelected(shift);return;}
   if(!editInputActive()){
     if(alt)return;
     if(ctrl){
@@ -1104,7 +1179,7 @@ function on_key_down(vkey){
     }
     if(vkey===13){keyboardAction(shift?'queueSelection':'playSelection');return;}
     if(vkey===33||vkey===34||vkey===36||vkey===35){keyboardPageScroll(vkey);return;}
-    if(vkey===46){keyboardRemoveSelected();return;}
+    if(vkey===46){keyboardRemoveSelected(shift);return;}
     return;
   }
   if(alt)return;
@@ -1136,12 +1211,13 @@ function on_key_down(vkey){
 var verdantShortcuts=[
   [4701,'Scroll page up','pageUp'],[4702,'Scroll page down','pageDown'],
   [4703,'Scroll to top','home'],[4704,'Scroll to bottom','end'],
-  [4705,'Delete selected playlist tracks','delete'],[4706,'Find in current view','find'],
+  [4705,'Delete selection','delete'],[4706,'Find in current view','find'],
   [4707,'Select visible tracks','selectAll'],[4708,'Clear track selection','deselect'],
   [4709,'Play and queue selected tracks','playSelection'],[4710,'Queue selected tracks','queueSelection'],
   [4711,'Go back','back'],[4712,'Go forward','forward'],
   [4713,'Focus global search','globalSearch'],[4714,'Refresh Verdant view','refresh'],
-  [4715,'Leave Search / Back','leaveSearch']
+  [4715,'Leave Search / Back','leaveSearch'],
+  [4716,'New playlist','newPlaylist'],[4717,'Rename active playlist','renamePlaylist']
 ];
 var verdantRegistered=[];
 function registerVerdantShortcuts(){
@@ -1235,6 +1311,7 @@ function on_drag_drop(action,x,y,mask){
   navDropHover=false; plDropHover=false; repaintAll();
 }
 function on_script_unload(){
+  if(fileOperationTimer!==null)window.ClearTimeout(fileOperationTimer);
   if(typeof fb.UnregisterMainMenuCommand==='function')for(var i=0;i<verdantRegistered.length;i++)try{fb.UnregisterMainMenuCommand(verdantRegistered[i]);}catch(e){}
   rgTipClear();
   audioPopup=null;stopLyAnim(); stopCaret(); stopViz(); stopScrollAnim(); stopShimAnim(); stopMemWatch();
@@ -1248,7 +1325,19 @@ function invalidateLibrary(){
   warmJob=null; jobs={};           // anything in flight refers to the old library
   gates={}; rowGate={}; shelfHandles=null; artsGating=false;   // every section re-gates
 }
-function libChanged(){ clearTrackSelection(); invalidateLibrary(); artCardCache={}; artCardN=0; repaintAll(); }
+function libChanged(){
+  var artist=view==='artist'?viewArtist:null;
+  var albumKey=view==='album'&&viewAlbum?viewAlbum.key:null;
+  clearTrackSelection(); invalidateLibrary(); artCardCache={}; artCardN=0;
+  if(artist!==null)loadArtist(artist);
+  if(albumKey!==null){
+    var albums=getSearchAlbumIdx(),match=null;
+    for(var i=0;i<albums.length;i++)if(albums[i].key===albumKey){match=albums[i];break;}
+    if(match)loadAlbum(match);
+    else{viewAlbum=null;view='songs';}
+  }
+  repaintAll();
+}
 function on_library_items_added(){ libChanged(); }
 function on_library_items_removed(){ libChanged(); }
 function on_library_items_changed(){ libChanged(); }

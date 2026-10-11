@@ -123,13 +123,36 @@ function drawOverlays(gr){
     tL(gr,'Rename playlist',FONT.sect,COL.text,rx0+28,ry0+22,rw-56,26);
     var ix=rx0+28, iyf=ry0+64, iw=rw-56, ih=46;
     gr.FillRoundRect(ix,iyf,iw,ih,6,6,RGB(62,62,62));
-    var tw3=gr.CalcTextWidth(renameEdit.text,FONT.pl);
-    tL(gr,renameEdit.text,FONT.pl,COL.text,ix+14,iyf,iw-28,ih);
-    if(caretOn){ var cxr=ix+14+Math.min(iw-30,tw3)+2; gr.FillSolidRect(cxr,iyf+Math.round((ih-20)/2),2,20,COL.text); }
+    var txt=renameEdit.text,ed=renameEdit,fs=FONT.pl,tx=ix+14,tw=iw-28;
+    ed.cursor=Math.max(0,Math.min(ed.cursor,txt.length));
+    ed.anchor=Math.max(0,Math.min(ed.anchor,txt.length));
+    var start=Math.min(ed.viewStart||0,ed.cursor);
+    while(start<ed.cursor && gr.CalcTextWidth(txt.slice(start,ed.cursor),fs)>tw-8)start++;
+    while(start>0 && gr.CalcTextWidth(txt.slice(start-1,ed.cursor),fs)<tw-8)start--;
+    ed.viewStart=start;
+    var edges=[0],end=start;
+    for(var ri=start;ri<txt.length;ri++){
+      var measured=gr.CalcTextWidth(txt.slice(start,ri+1),fs);
+      if(measured>tw-5)break;
+      edges.push(measured);end=ri+1;
+    }
+    ed.hit={x:tx,start:start,edges:edges};
+    var selected=renameSelection();
+    if(selected[1]>start && selected[0]<end){
+      var sa=Math.max(start,selected[0]),sb=Math.min(end,selected[1]);
+      var sx=gr.CalcTextWidth(txt.slice(start,sa),fs),ex=gr.CalcTextWidth(txt.slice(start,sb),fs);
+      gr.FillSolidRect(tx+sx,iyf+9,Math.max(1,ex-sx),ih-18,RGBA(72,132,196,175));
+    }
+    tL(gr,txt.slice(start,end),fs,COL.text,tx,iyf,tw,ih);
+    if(caretOn){
+      var cxr=tx+gr.CalcTextWidth(txt.slice(start,ed.cursor),fs);
+      gr.FillSolidRect(cxr,iyf+Math.round((ih-20)/2),2,20,COL.text);
+    }
     var canSave=renameEdit.text.replace(/^\s+|\s+$/g,'').length>0;
     var bw=118, bh=40, by=ry0+rhh-bh-22, dx=rx0+rw-28-bw, ccx=dx-14-bw;
     RENAME_HB={
       panel:{x0:rx0,y0:ry0,x1:rx0+rw,y1:ry0+rhh},
+      input:{x0:ix,y0:iyf,x1:ix+iw,y1:iyf+ih},
       cancel:dlgBtn(gr,ccx,by,bw,bh,'Cancel',RGB(52,52,52),RGB(66,66,66),COL.text),
       save:dlgBtn(gr,dx,by,bw,bh,'Save',canSave?COL.green:RGB(60,92,74),canSave?RGB(45,215,110):RGB(60,92,74),canSave?COL.black:COL.text3),
       canSave:canSave
@@ -185,8 +208,9 @@ function drawOverlays(gr){
   }
   if(confirmDel){
     var cw=380, ch=180, cy=Math.round((H-ch)/2), cx=modalPanel(gr,cw,ch,cy);
-    tL(gr,'Delete playlist?',FONT.sect,COL.text,cx+28,cy+24,cw-56,26);
-    tL(gr,'This removes "'+confirmDel.name+'" from your library.',FONT.pl,COL.text2,cx+28,cy+58,cw-56,40);
+    var files=confirmDel.kind==='files';
+    tL(gr,files?'Delete music files?':'Delete playlist?',FONT.sect,COL.text,cx+28,cy+24,cw-56,26);
+    tL(gr,files?'Delete '+confirmDel.handles.length+' selected track(s) from disk?':'Remove "'+confirmDel.name+'"? Music files are kept.',FONT.pl,COL.text2,cx+28,cy+58,cw-56,40);
     var cbw=118, cbh=40, cby=cy+ch-cbh-22, cdx=cx+cw-28-cbw, cccx=cdx-14-cbw;
     CONF_HB={
       cancel:dlgBtn(gr,cccx,cby,cbw,cbh,'Cancel',RGB(52,52,52),RGB(66,66,66),COL.text),

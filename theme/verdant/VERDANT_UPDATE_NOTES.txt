@@ -127,3 +127,21 @@ Loudness status tooltip (2026-10-11)
 - Prevent invalid FillRoundRect arc values when scan progress is very low.
 - The progress bar is rounded when wide enough and uses a solid fill for tiny progress values.
 - No other layout, hover delay, or tooltip contents changed.
+
+Keyboard shortcuts (personal update, 2026-10-11):
+- Ctrl+N creates and opens an empty Verdant playlist using the same action as the sidebar plus button.
+- F2 opens Rename for the active playlist in its playlist view.
+- Rename now has a selectable caret, word movement, keyboard selection, and clipboard editing.
+- Search / Ctrl+F filters retain their existing caret and selection shortcuts.
+- If foobar2000 consumes Ctrl+N globally, reassign/unbind that native shortcut in Preferences.
+Delete shortcuts:
+- Selecting a sidebar/Home playlist clears track selection. Delete with no selected
+  tracks asks to delete the playlist; selected playlist tracks are still removed only
+  from that playlist. Enter confirms the prompt and Escape cancels it.
+- Plain Delete on library tracks confirms deletion from disk; Shift+Delete also
+  confirms file deletion, including in playlists. Selected Search/filter results
+  now take priority over text editing for Delete. Command lookup also tries leaf
+  names for compatibility. No filesystem deletion APIs are used.
+- Track context menu includes the full native foobar menu, exposing installed
+  File Operations and Converter commands/presets for the selected tracks.
+- Mouse side-button remapping helper removed at user request.
