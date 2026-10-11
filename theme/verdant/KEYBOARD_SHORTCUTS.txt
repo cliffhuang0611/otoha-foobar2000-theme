@@ -17,6 +17,9 @@ When Verdant has keyboard focus:
  F5                      Refresh the current view
  Ctrl+F5                 Reload JSplitter scripts
  Ctrl+R                  Reserved for your foobar2000 library rescan hotkey
+ Ctrl+C                  Copy selected tracks from playlists, All Songs, artist, album or Search
+ Ctrl+X                  Copy, then remove selected tracks from the source playlist
+ Ctrl+V                  Append clipboard tracks to the open editable playlist
 
 When typing in the custom Search/filter bar, Ctrl+A, Home, End, Delete,
 Ctrl+Arrows, and other editing shortcuts keep their usual text-editing

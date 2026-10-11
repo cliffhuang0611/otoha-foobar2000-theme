@@ -18,7 +18,7 @@ function drawPlaylistCard(gr,x,y,w,i,clipL,clipR){
   else paintPlCard(gr,x,y,w,i,cardHov);
   var dx=x+w-32;
   if(cardHov && dx>=hx0 && dx+32<=hx1) drawDots(gr,dx,y+(w-24)+16,i);
-  HB_CARD.push({x0:hx0,y0:y,x1:hx1,y1:y+h,kind:'pl',id:i});
+  HB_CARD.push({x0:hx0,y0:y,x1:hx1,y1:y+h,kind:'pl',id:i,truncated:gr.CalcTextWidth(plName(i),FONT.card)>w-50});
 }
 function paintArtistCard(gr,x,y,w,a,hov){
   if(!isFinite(w) || w<1) return;

@@ -7,9 +7,10 @@ function drawNavRow(gr,y,h,on,hov,pi,name,sub){
   if((on||hov) && R.navLib.w>16 && h>4) gr.FillRoundRect(R.navLib.x+8,y,R.navLib.w-16,h-4,6,6,on?COL.rowActive:COL.rowHover);
   var cs=44, cx=R.navLib.x+16, cy=y+(h-cs)/2;
   if(pi>=0) drawPlCover(gr,cx,cy,cs,4,pi,name); else drawLibCover(gr,cx,cy,cs,4);
-  var tx=cx+cs+12, tw=R.navLib.x+R.navLib.w-16-tx-((hov&&pi>=0)?26:0);   // leave room for the "..." button
+  var tx=cx+cs+12, tw=R.navLib.x+R.navLib.w-16-tx-(pi>=0?26:0);   // reserve dots space without shifting names on hover
   tL(gr,name,FONT.pl,on?COL.green:COL.text,tx,y+8,tw,20);
   tL(gr,sub,FONT.plSub,COL.text2,tx,y+30,tw,16);
+  return gr.CalcTextWidth(name,FONT.pl)>Math.max(0,tw);
 }
 function drawNav(gr){
   HB_PL=[];
@@ -61,9 +62,9 @@ function drawNav(gr){
     // "All Songs" header is painted over, so it must not answer the mouse there either
     var hy0=Math.max(ry,listTop), hy1=Math.min(ry+rh,cropY);
     var rowHov=(hy1>hy0) && hv(R.navLib.x,hy0,R.navLib.x+R.navLib.w,hy1);
-    drawNavRow(gr,ry,rh,view==='playlist'&&i2===active,rowHov,i2,nm,plCount(i2)+' songs');
+    var truncated=drawNavRow(gr,ry,rh,view==='playlist'&&i2===active,rowHov,i2,nm,plCount(i2)+' songs');
     if(rowHov && ry>=listTop) drawDots(gr,R.navLib.x+R.navLib.w-32,ry+(rh-24)/2,i2);
-    if(hy1>hy0) HB_PL.push({x0:R.navLib.x,y0:hy0,x1:R.navLib.x+R.navLib.w,y1:hy1,i:i2});
+    if(hy1>hy0) HB_PL.push({x0:R.navLib.x,y0:hy0,x1:R.navLib.x+R.navLib.w,y1:hy1,i:i2,truncated:truncated});
   }
   // crop partial rows top & bottom, redraw the sticky header block (title + All Songs), then the scrollbar
   // (clear starts below the panel's rounded corners so a square fill can't square them off)

@@ -3,10 +3,54 @@
    every module shares one global scope, so load order is set there. */
 
 function openPlaylistMenu(pl,x,y){
-  var items=[];
-  if(!plman.IsPlaylistLocked(pl)) items.push({label:'Add files...',act:'addfiles'},{label:'Add folder...',act:'addfolder'});
-  items.push({label:'Save playlist...',act:'save'},{label:'Rename',act:'rename'},{label:'Delete',act:'delete',danger:true});
+  clearPlaylistNameTooltip();
+  var editable=canEditPl(pl),paste=false;
+  try{paste=editable&&fb.CheckClipboardContents();}catch(e){}
+  var items=[
+    {label:'Add files...',act:'addfiles',disabled:!editable},
+    {label:'Add folder...',act:'addfolder',disabled:!editable},
+    {label:'Paste tracks',act:'paste',disabled:!paste},{separator:true},
+    {label:'Remove duplicates',act:'dedupe',disabled:!editable},
+    {label:'Remove missing files',act:'missing',disabled:!editable},{separator:true},
+    {label:'Save playlist...',act:'save'},
+    {label:'Duplicate playlist',act:'duplicate'},{separator:true},
+    {label:'Rename...',act:'rename'},
+    {label:'Clear playlist...',act:'clear',disabled:!editable,danger:true},
+    {label:'Delete playlist...',act:'delete',danger:true}
+  ];
   ctxMenu={kind:'pl', pl:pl, name:plman.GetPlaylistName(pl), x:x, y:y, items:items};
+  repaintAll();
+}
+function playlistCleanup(pl,missing){
+  if(!canEditPl(pl))return;
+  var items=getItems(pl),seen=Object.create(null),entries=[];
+  for(var i=0;i<items.Count;i++){
+    var key=trackKey(items[i]),remove=missing?localFileExists(items[i].Path)===false:!!seen[key];
+    seen[key]=true;
+    if(remove)entries.push({row:{pl:pl,item:i},handle:items[i]});
+  }
+  if(entries.length)removeSelectedTracksFromPl(pl,entries);
+  fb.ShowPopupMessage(entries.length+' '+(missing?'missing':'duplicate')+' playlist entr'+(entries.length===1?'y':'ies')+' removed. Music files are kept.','Verdant');
+}
+function handlePlaylistMenuAction(act,menu){
+  var pl=menu.pl;
+  ctxMenu=null;
+  if(act==='save')savePlaylistToFile(pl);
+  else if(act==='rename')startRename(pl);
+  else if(act==='addfiles')addFilesToPl(pl);
+  else if(act==='addfolder')addFolderToPl(pl);
+  else if(act==='dedupe'||act==='missing')playlistCleanup(pl,act==='missing');
+  else if(act==='paste'){
+    if(canEditPl(pl))try{
+      if(fb.CheckClipboardContents()){
+        var handles=fb.GetClipboardContents();
+        if(handles&&handles.Count){plman.UndoBackup(pl);plman.InsertPlaylistItems(pl,plman.PlaylistItemCount(pl),handles,false);invalidateItems();}
+      }
+    }catch(e){fb.ShowPopupMessage('Could not paste tracks: '+String(e),'Verdant');}
+  }else if(act==='duplicate'){
+    var copy=plman.CreatePlaylist(plman.PlaylistCount,plman.GetPlaylistName(pl)+' (copy)');
+    plman.InsertPlaylistItems(copy,0,plman.GetPlaylistItems(pl),false);invalidateItems();
+  }else if(act==='clear'||act==='delete')confirmDel={kind:act==='clear'?'clear':'playlist',pl:pl,name:menu.name};
   repaintAll();
 }
 /* Export the clicked playlist through foobar2000's native Save Playlist dialog.
@@ -250,9 +294,45 @@ function removeSelectedTracksFromPl(pl,entries){
   clearTrackSelection(); invalidateItems(); updateNP(); repaintAll();
 }
 
+/* Use foobar's track clipboard, which survives page changes and panel reloads.
+   Cut removes playlist entries only after the clipboard write succeeds. */
+function playlistClipboardCopy(cut){
+  if(view!=='playlist'&&view!=='songs'&&view!=='artist'&&view!=='album'&&view!=='search')return false;
+  if(cut && view!=='playlist')return false;
+  var pl=plman.ActivePlaylist,entries=selectedTrackEntries(),handles=[];
+  if(!entries.length || (view==='playlist' && pl<0) || (cut && !canEditPl(pl)))return false;
+  for(var i=0;i<entries.length;i++){
+    if(view!=='playlist' || entries[i].row.pl===pl)handles.push(entries[i].handle);
+  }
+  if(!handles.length)return false;
+  try{
+    if(!fb.CopyHandleListToClipboard(songList(handles)))return false;
+  }catch(e){
+    fb.ShowPopupMessage('Could not copy tracks: '+String(e),'Verdant');return false;
+  }
+  if(cut)removeSelectedTracksFromPl(pl,entries);
+  return true;
+}
+function playlistClipboardPaste(){
+  if(view!=='playlist')return false;
+  var pl=plman.ActivePlaylist;
+  if(pl<0 || !canEditPl(pl))return false;
+  try{
+    if(!fb.CheckClipboardContents())return false;
+    var handles=fb.GetClipboardContents();
+    if(!handles || !handles.Count)return false;
+    plman.UndoBackup(pl);
+    plman.InsertPlaylistItems(pl,plman.PlaylistItemCount(pl),handles,false);
+  }catch(e){
+    fb.ShowPopupMessage('Could not paste playlist tracks: '+String(e),'Verdant');return false;
+  }
+  clearTrackSelection();invalidateItems();repaintAll();return true;
+}
+
 /* Song-level actions for library, search, artist, and playlist views.
    The flyout draws beside the main context menu (ui/chrome.js), not in its place. */
 function openSongMenu(handle,x,y,pl,item,entries){
+  clearPlaylistNameTooltip();
   entries=(entries&&entries.length)?entries:[{handle:handle,row:{pl:pl,item:item}}];
   var amount=entries.length;
   var actions=[{label:'Add to playlist',act:'destinations',submenu:true},
@@ -321,6 +401,15 @@ function watchFileOperation(handles){
 }
 function commitDeletePrompt(){
   if(!confirmDel)return;
+  if(confirmDel.kind==='clear'){
+    var pl=confirmDel.pl;confirmDel=null;
+    if(canEditPl(pl)){
+      var items=getItems(pl),entries=[];
+      for(var i=0;i<items.Count;i++)entries.push({row:{pl:pl,item:i},handle:items[i]});
+      removeSelectedTracksFromPl(pl,entries);
+    }
+    repaintAll();return;
+  }
   if(confirmDel.kind!=='files'){doDeletePlaylist(confirmDel.pl);return;}
   var handles=confirmDel.handles;
   confirmDel=null;repaintAll();

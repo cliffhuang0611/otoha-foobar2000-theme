@@ -145,3 +145,33 @@ Delete shortcuts:
 - Track context menu includes the full native foobar menu, exposing installed
   File Operations and Converter commands/presets for the selected tracks.
 - Mouse side-button remapping helper removed at user request.
+Playlist clipboard shortcuts:
+- Ctrl+C copies selected playlist tracks in displayed order, including duplicates.
+- Ctrl+X copies successfully before removing source playlist entries; files are kept.
+- Ctrl+V appends clipboard tracks to the open editable playlist, with an undo backup.
+- Uses foobar's native track clipboard; locked/automatic playlists cannot be cut or
+  pasted into. Search/filter/rename editors retain text clipboard shortcuts.
+Playlist context menu:
+- Available on sidebar/Home playlist cards and the open playlist heading/empty area.
+- Grouped adding, cleanup, save/duplicate, and management actions; Delete is last.
+- Remove duplicates keeps the first file/subsong occurrence in stored playlist order.
+- Remove missing files skips streams; both cleanup actions use an undo backup.
+- Clear asks for confirmation and keeps the playlist and music files.
+- Disabled clipboard/editing actions are shown dimmed; menu height adapts to the window.
+Sidebar and compact queue layout:
+- Expanded compact queue occupies its own layout space, keeping main scrollbars visible.
+- Drag the sidebar's right-hand gap to resize it; width is saved in panel properties.
+- Sidebar width is limited to preserve main content space in small windows.
+- Truncated sidebar/Home playlist names show native hover tooltips. Names reserve
+  the dots-button space consistently, so hovering does not shorten them further.
+Home display modes:
+- Grid/List icon toggle beside the Artists in your library heading; choice persists in panel properties.
+- Your Playlists always uses its card shelf; Grid/List changes only the artists.
+- Artist list rows show artwork, names and song counts.
+- Existing card navigation and playlist right-click actions work on list rows.
+- List uses vertical scrolling, clipped row hitboxes and truncated playlist-name tooltips.
+- The artist heading and Grid/List controls scroll with the artist section, then
+  stick to the top when the heading reaches it. Artist click targets stay below
+  the sticky heading; controls reserve room for the queue button and scrollbar.
+- Grid/List shares one vertical pixel offset: toggling keeps the visible position,
+  clamped to the new layout maximum. The playlist shelf shares its horizontal offset.

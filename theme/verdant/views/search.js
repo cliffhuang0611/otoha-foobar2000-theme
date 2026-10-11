@@ -131,17 +131,8 @@ function searchBoxRect(){
   var head=(view==='songs'?SHEAD:(r.w<950?156:M.headH));
   var y=inline?r.y+head+12:r.y+SBOX_TOP-4;
   var x=r.x+M.cpad-2;
-  // At compact sizes the queue is an overlay, not part of R.main's width.
-  // Keep BOTH the Search page input and the Ctrl+F filter fully to its left.
+  // Queue has its own layout space; editors use the main panel's content edge.
   var right=r.x+r.w-M.cpad+6;
-  if(W<1180 && compactQueueOpen && R.queueW>0){
-    // The compact queue's collapse button occupies the 32px immediately
-    // to the LEFT of the queue, plus its 10px offset. The search editor
-    // must stop before that control (not merely before the queue panel),
-    // or its blinking caret repaint can paint over the toggle icon.
-    var queueToggleLeft=R.queue.x-32-10;
-    right=Math.min(right,queueToggleLeft-12);
-  }
   // Inline filters have an X button 10px to the right of the input, 30px
   // wide; leave another 8px of breathing room before the queue/sidebar.
   var reserved=inline?48:0;

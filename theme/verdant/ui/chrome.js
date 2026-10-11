@@ -160,25 +160,32 @@ function drawOverlays(gr){
   }
   if(ctxMenu){
     var ih=42,pad=6,i,it,iw=190,menu=ctxMenu;
-    for(i=0;i<menu.items.length;i++) iw=Math.max(iw,Math.round(gr.CalcTextWidth(menu.items[i].label,FONT.pl))+48+(menu.items[i].submenu?14:0));
+    var separators=0;
+    for(i=0;i<menu.items.length;i++){
+      if(menu.items[i].separator){separators++;continue;}
+      iw=Math.max(iw,Math.round(gr.CalcTextWidth(menu.items[i].label,FONT.pl))+48+(menu.items[i].submenu?14:0));
+    }
+    ih=Math.min(ih,Math.max(18,Math.floor((H-32-pad*2-separators*10)/(menu.items.length-separators))));
     iw=Math.min(iw,Math.max(120,W-20));
-    var h=menu.items.length*ih+pad*2;
+    var h=(menu.items.length-separators)*ih+separators*10+pad*2;
     var mnx=Math.max(10,Math.min(menu.x,W-iw-10)),mny=Math.max(10,Math.min(menu.y,H-h-10));
     gr.FillSolidRect(mnx+3,mny+4,iw,h,RGBA(0,0,0,120));
     gr.FillRoundRect(mnx,mny,iw,h,8,8,RGB(43,43,43));
-    var parentY=mny;
+    var parentY=mny,iy=mny+pad;
     for(i=0;i<menu.items.length;i++){
-      var iy=mny+pad+i*ih; it=menu.items[i];
+      it=menu.items[i];
+      if(it.separator){gr.DrawLine(mnx+12,iy+5,mnx+iw-12,iy+5,1,RGBA(255,255,255,24));iy+=10;continue;}
       if(it.act==='destinations') parentY=iy;
-      var active=hv(mnx,iy,mnx+iw,iy+ih)||(menu.subOpen&&it.submenu);
+      var active=!it.disabled&&(hv(mnx,iy,mnx+iw,iy+ih)||(menu.subOpen&&it.submenu));
       if(active) gr.FillRoundRect(mnx+4,iy,iw-8,ih,5,5,RGBA(255,255,255,20));
-      tL(gr,it.label,FONT.pl,it.danger?RGB(240,96,96):COL.text,mnx+16,iy,iw-(it.submenu?54:24),ih);
+      tL(gr,it.label,FONT.pl,it.disabled?COL.text3:it.danger?RGB(240,96,96):COL.text,mnx+16,iy,iw-(it.submenu?54:24),ih);
       if(it.submenu){
         var arx=mnx+iw-22, ary=iy+ih/2;
         gr.DrawLine(arx-4,ary-5,arx+1,ary,2,COL.text2);
         gr.DrawLine(arx+1,ary,arx-4,ary+5,2,COL.text2);
       }
-      CTX_HB.push({x0:mnx,y0:iy,x1:mnx+iw,y1:iy+ih,act:it.act,menu:'root'});
+      CTX_HB.push({x0:mnx,y0:iy,x1:mnx+iw,y1:iy+ih,act:it.act,menu:'root',disabled:!!it.disabled});
+      iy+=ih;
     }
     menu.subRect=null;
     if(menu.kind==='song' && menu.subOpen){
@@ -209,12 +216,13 @@ function drawOverlays(gr){
   if(confirmDel){
     var cw=380, ch=180, cy=Math.round((H-ch)/2), cx=modalPanel(gr,cw,ch,cy);
     var files=confirmDel.kind==='files';
-    tL(gr,files?'Delete music files?':'Delete playlist?',FONT.sect,COL.text,cx+28,cy+24,cw-56,26);
-    tL(gr,files?'Delete '+confirmDel.handles.length+' selected track(s) from disk?':'Remove "'+confirmDel.name+'"? Music files are kept.',FONT.pl,COL.text2,cx+28,cy+58,cw-56,40);
+    var clear=confirmDel.kind==='clear';
+    tL(gr,files?'Delete music files?':clear?'Clear playlist?':'Delete playlist?',FONT.sect,COL.text,cx+28,cy+24,cw-56,26);
+    tL(gr,files?'Delete '+confirmDel.handles.length+' selected track(s) from disk?':clear?'Remove all tracks from "'+confirmDel.name+'"? Music files are kept.':'Remove "'+confirmDel.name+'"? Music files are kept.',FONT.pl,COL.text2,cx+28,cy+58,cw-56,40);
     var cbw=118, cbh=40, cby=cy+ch-cbh-22, cdx=cx+cw-28-cbw, cccx=cdx-14-cbw;
     CONF_HB={
       cancel:dlgBtn(gr,cccx,cby,cbw,cbh,'Cancel',RGB(52,52,52),RGB(66,66,66),COL.text),
-      del:dlgBtn(gr,cdx,cby,cbw,cbh,'Delete',RGB(224,72,72),RGB(240,96,96),COL.text)
+      del:dlgBtn(gr,cdx,cby,cbw,cbh,clear?'Clear':'Delete',RGB(224,72,72),RGB(240,96,96),COL.text)
     };
   }
   if(dupPrompt) drawDupPrompt(gr);

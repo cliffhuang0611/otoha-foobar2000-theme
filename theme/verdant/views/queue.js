@@ -27,6 +27,7 @@ function qEntry(gr,r,x,y,cs,dy,h,seed,key,title,artist,tcol){
 function drawQueue(gr){
   HB_TABS=[]; HB_Q=[];
   var r=R.queue; panelBg(gr,r,COL.base);
+  var headerExtra=W<1180&&compactQueueOpen&&r.w<220?36:0;
   var x=r.x+18;
   var qOn=rightTab==='queue';
   tL(gr,'Queue',FONT.tab,qOn?COL.text:COL.text2,x,r.y+16,80,26);
@@ -42,13 +43,13 @@ function drawQueue(gr){
       tC(gr,'No embedded lyrics or .lrc/.txt file found.',FONT.qArtist,COL.text3,r.x,r.y+Math.round(r.h/2)+2,r.w,18);
       return;
     }
-    var viewTop=r.y+64, viewBot=r.y+r.h-16, maxW=r.w-28;
+    var viewTop=r.y+64+headerExtra, viewBot=r.y+r.h-16, maxW=r.w-28;
     if(lyrics.synced) drawRollingLyrics(gr,r.x+14,viewTop,maxW,viewBot,FONT.lyric,COL.green,'c');
     else drawStaticLyrics(gr,r.x+14,maxW,viewTop+6,viewBot,FONT.lyric,0.45);
     return;
   }
 
-  var qy=r.y+70;
+  var qy=r.y+70+headerExtra;
   tL(gr,'Now playing',FONT.sect,COL.text,x,qy,r.w-36,24); qy+=36;
   qEntry(gr,r,x,qy,48,6,NP,'np',undefined,npTitleStr||'Nothing playing',npArtistStr,(fb.IsPlaying||fb.IsPaused)?COL.green:COL.text);
   qy+=70;

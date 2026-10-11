@@ -334,7 +334,7 @@ function paintPlCard(gr,x,y,w,pi,hov){
   if(w<=24) return;
   var cs=w-24;
   drawPlCover(gr,x+12,y+12,cs,6,pi,plName(pi));
-  tL(gr,plName(pi),FONT.card,COL.text,x+12,y+cs+18,w-24-(hov?26:0),20);
+  tL(gr,plName(pi),FONT.card,COL.text,x+12,y+cs+18,w-50,20);
   tL(gr,plCount(pi)+' songs',FONT.plSub,COL.text2,x+12,y+cs+40,w-24,16);
 }
 function renderPlCard(pi,w,hov){
