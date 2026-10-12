@@ -216,10 +216,14 @@ function drawOverlays(gr){
   if(confirmDel){
     var cw=380, ch=180, cy=Math.round((H-ch)/2), cx=modalPanel(gr,cw,ch,cy);
     var files=confirmDel.kind==='files';
-    var clear=confirmDel.kind==='clear';
-    tL(gr,files?'Delete music files?':clear?'Clear playlist?':'Delete playlist?',FONT.sect,COL.text,cx+28,cy+24,cw-56,26);
-    tL(gr,files?'Delete '+confirmDel.handles.length+' selected track(s) from disk?':clear?'Remove all tracks from "'+confirmDel.name+'"? Music files are kept.':'Remove "'+confirmDel.name+'"? Music files are kept.',FONT.pl,COL.text2,cx+28,cy+58,cw-56,40);
-    var cbw=118, cbh=40, cby=cy+ch-cbh-22, cdx=cx+cw-28-cbw, cccx=cdx-14-cbw;
+    var queueClear=confirmDel.kind==='queueclear',clear=confirmDel.kind==='clear'||queueClear;
+    tL(gr,queueClear?'Clear upcoming tracks?':files?'Delete music files?':clear?'Clear playlist?':'Delete playlist?',FONT.sect,COL.text,cx+28,cy+24,cw-56,26);
+    if(queueClear){
+      tL(gr,'Clear all upcoming tracks?',FONT.pl,COL.text2,cx+28,cy+58,cw-56,20);
+      tL(gr,'Playback stops after the current track.',FONT.plSub,COL.text2,cx+28,cy+82,cw-56,20);
+    }else tL(gr,files?'Delete '+confirmDel.handles.length+' selected track(s) from disk?':clear?'Remove all tracks from "'+confirmDel.name+'"? Music files are kept.':'Remove "'+confirmDel.name+'"? Music files are kept.',FONT.pl,COL.text2,cx+28,cy+58,cw-56,40);
+    var cbw=118,cbh=40,cby=cy+ch-cbh-22,buttonGap=14;
+    var cccx=cx+(cw-(cbw*2+buttonGap))/2,cdx=cccx+cbw+buttonGap;
     CONF_HB={
       cancel:dlgBtn(gr,cccx,cby,cbw,cbh,'Cancel',RGB(52,52,52),RGB(66,66,66),COL.text),
       del:dlgBtn(gr,cdx,cby,cbw,cbh,clear?'Clear':'Delete',RGB(224,72,72),RGB(240,96,96),COL.text)

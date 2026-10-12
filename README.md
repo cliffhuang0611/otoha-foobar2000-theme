@@ -74,22 +74,32 @@ visualizers, cover mosaics, and ReplayGain remain available.
   Open containing folder, Properties, Delete files, and playlist removal where applicable.
   **Show more options** opens foobar2000's full native track menu, including installed File Operations
   and Converter commands/presets for the selected tracks.
-- **One Up next list** combines explicitly queued tracks and the remaining playlist sequence
-  in playback order. Internal handoff entries are not displayed twice. With repeat off, the list
-  does not wrap or fall back to an unrelated active playlist when playback ends.
-- Drag any visible Up next track before/after another, including across tracks originally queued
-  manually or supplied by the playlist. Reordering uses hidden playback copies, preserving the
-  saved source playlist and the current playing track's position. Queued additions take priority.
-- Single-click selects; double-click starts the selected track and continues with the rest of
-  Up next. Escape cancels dragging; playback or list changes invalidate a stale drop.
-- Right-click the Queue panel for **Clear Up next**: the current track continues, then playback
-  stops. Starting a new track or adding a new queue restores normal continuation.
-- Reordered playback and internal handoff identification survive JSplitter reloads through hidden
-  playlists and saved panel properties. Shuffle toggles do not restart or seek the current track.
-- **Stop button** beside Next ends playback immediately and retains the stopped track and Up next
-  order, including across panel reloads. Play restarts that track at 0:00; Pause resumes at its
-  existing position. Starting another track replaces the retained sequence. Repeat sits beside
-  Shuffle, keeping Play/Pause centered.
+- **Play order** shows one finite playback sequence with the current occurrence highlighted in
+  green, including earlier and upcoming tracks. Repeat all wraps through that same sequence;
+  repeat one keeps the current occurrence highlighted rather than adding another copy.
+  Deliberately queued duplicate tracks remain separate entries.
+- Tracks changing or repeat wrapping automatically reveals the current row. Manual scrolling
+  stays put between track changes; hover and ordinary redraws do not pull you back.
+- Drag any visible row to reorder playback without changing the saved playlist or restarting
+  the current track. Single-click selects; double-click plays that occurrence in the same full
+  sequence. Escape cancels a drag, and playback/list changes invalidate a stale drop.
+- The list scrolls independently with a wheel/scrollbar; dragging near its edges scrolls it
+  automatically. Tabs, Now playing and the footer stay fixed.
+- **Clear upcoming tracks** in the footer or context menu asks for confirmation. It removes
+  the remaining sequence and stops after the current track, with empty actions disabled.
+- Reordered playback, the current position and hidden handoff identity survive JSplitter reloads.
+  With repeat off, playback ends at the final track; repeat does not create an infinite UI list.
+- **Stop button** beside Previous ends playback immediately and retains the stopped track and full Play order
+  sequence, including across panel reloads. Play restarts that track at 0:00; Pause resumes at its
+  existing position. Starting another track replaces the retained sequence. Shuffle and Repeat form a smaller pair on the queue side, keeping Play/Pause centered.
+- When no track is loaded, the player uses a neutral music-note placeholder with Nothing playing
+  (or Ready to play when queued tracks are available), instead of a colored cover block.
+- Artist-track double-click plays within that album. Right-click a track to add its whole album
+  or all of the artist's displayed albums to Play order; the artist header also has Queue all albums.
+  When Shuffle is on, the entire added batch is shuffled across albums; with Shuffle off,
+  tracks retain the displayed album/disc/track order. Existing queued tracks keep their order.
+  Turning Shuffle off after adding albums restores the remaining batch's album order without
+  dropping other albums or restarting playback; the original batch order survives reloads.
 - **Playlist context menu** on sidebar/Home playlist cards and the playlist heading or empty area,
   grouped in this order:
 
@@ -132,10 +142,14 @@ visualizers, cover mosaics, and ReplayGain remain available.
 - Search/filter fields support mouse caret placement, text selection, word movement, and clipboard
   editing. Selected text takes priority for Ctrl+C; otherwise selected tracks can be copied.
 - Artist and album tracks use **DISCNUMBER then TRACKNUMBER** order; missing numbers display blank.
+  Missing or zero dates are omitted from artist, album, and grouped-library metadata.
 - Lyrics support adjacent `.lrc` / `.txt` files and embedded lyrics fields, including synchronized
   highlighting and scrolling; plain lyrics can be scrolled in the queue pane.
 - One icon beside volume opens **output-device and saved DSP-preset** selectors, with active choices,
   scrolling flyouts, and explicit switching. Unsupported host APIs are handled with a message.
+- The same menu includes **Scheduler → Stop after current song**, using foobar2000's native setting.
+  It can be switched on/off without interrupting the current track; the settings icon is green
+  while enabled. There are no timed stops or extra scheduler components.
 - ReplayGain status is a **hover tooltip** instead of a permanent heading line. It reports tagged
   tracks and remaining unscanned tracks, rather than live scanner progress. Tiny progress values
   use safe drawing geometry for JSplitter 3.8.12.
@@ -220,7 +234,7 @@ See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional de
 - **All Songs** — your entire library in one virtualised list, optionally grouped by artist, album,
   or both. Handles thousands of tracks without stuttering.
 - **Search** — artists, albums, and tracks, with album pages and multi-token/fuzzy track matching.
-- **Queue / Lyrics pane** — one Up next list showing the upcoming playback sequence,
+- **Queue / Lyrics pane** — a finite Play order list highlighting the current track,
   or synced `.lrc` / plain `.txt` lyrics that roll with the track. Double-click a queue row to play it.
 - **Fullscreen mode** — big now-playing art, rolling lyrics, or an FFT audio visualizer fed from
   real PCM. Four visualizer styles.

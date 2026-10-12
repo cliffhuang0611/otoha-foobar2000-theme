@@ -42,6 +42,10 @@ function libTF(field){
   if(libTFCache.hasOwnProperty(field)) return libTFCache[field];
   var lib=libItems(), out=[];
   if(lib && lib.Count){ try{ out=TF[field].EvalWithMetadbs(lib); }catch(e){ out=[]; } }
+  if(field==='year')for(var i=0;i<out.length;i++){
+    var year=String(out[i]||'').replace(/^\s+|\s+$/g,'');
+    out[i]=/^0+$/.test(year)||year==='?'?'':year;
+  }
   libTFCache[field]=out; return out;
 }
 
@@ -115,7 +119,7 @@ function loadArtist(name){
    each carrying its own height + precomputed y. Grouping only re-sorts the index, never re-reads
    the library. Rows: {k:'g1'|'g2'|'t'}; headers also carry kind:'artist'|'album'. */
 var songsIdx=null, songsRows=null, songsTracks=null, songsContentH=0, songsTotalSec=0;
-var songsGroup='none', songsScroll=0, songsScrollT=0, SONGS_MAXPX=0;
+var songsGroup='both',songsScroll=0,songsScrollT=0,SONGS_MAXPX=0;
 var sgMenuOpen=false, SG_HB=[], HB_SG=null, HB_ALLSONGS=null, HB_RGNORM=null;
 var SONGS_GROUPS=[['No grouping','none'],['By artist','artist'],['By album','album'],['By artist & album','both']];
 /* ---- group-list metrics: one indent step per nesting level (SG_IND) and one shared vertical
@@ -263,7 +267,7 @@ function metaReady(pi){ return !!plMetaMap[pi]; }
 
 // jobs={} cancels any build in flight: jobStep finds no entry for its key and simply stops, so a
 // job that started against the old data can never publish it
-function invalidateItems(){ plFilteredCache=null; plCacheMap={}; plMetaMap={}; plCoverCache={}; coverPickCache={}; mosaicCache={}; warmed={}; plOrderMap={}; plNameCache={}; plCountCache={}; plCardCache={}; qMetaCache={}; visPlCache=null; warmJob=null; jobs={}; gates={}; rowGate={}; shelfHandles=null; }
+function invalidateItems(){ queueViewportCache=null;plFilteredCache=null; plCacheMap={}; plMetaMap={}; plCoverCache={}; coverPickCache={}; mosaicCache={}; warmed={}; plOrderMap={}; plNameCache={}; plCountCache={}; plCardCache={}; qMetaCache={}; visPlCache=null; warmJob=null; jobs={}; gates={}; rowGate={}; shelfHandles=null; }
 
 /* ---- Playlist view sort: only reorders how rows are DISPLAYED. Native item indices (playback,
    row menu, drag targets) are untouched, so order[displayRow] maps to the real item index. */

@@ -20,22 +20,26 @@ function drawBar(gr){
   var playing=fb.IsPlaying&&!fb.IsPaused;
   // left: cover + title/artist
   var cs=64, cx=16, cy=by+(M.barH-cs)/2;
-  drawCover(gr,cx,cy,cs,5,NP,'np');
+  if(NP)drawCover(gr,cx,cy,cs,5,NP,'np');
+  else{gr.FillRoundRect(cx,cy,cs,cs,8,8,COL.elev);drawIcon(gr,'music',COL.text3,cx+16,cy+16,32,32,26);}
   var tx=cx+cs+14;
   var titleWidth=Math.max(0,Math.min(260,Math.round(W/2)-174-tx));
-  if(titleWidth>20){tL(gr,npTitleStr,FONT.npTitle,COL.text,tx,by+26,titleWidth,20);
-  tL(gr,npArtistStr,FONT.npArtist,COL.text2,tx,by+50,titleWidth,18);}
+  if(titleWidth>20){
+    var queued=!NP&&upNextEntries(1).length>0;
+    tL(gr,NP?npTitleStr:queued?'Ready to play':'Nothing playing',FONT.npTitle,NP?COL.text:COL.text2,tx,by+26,titleWidth,20);
+    tL(gr,NP?npArtistStr:queued?'Tracks waiting in Up next':'Choose a track to begin',FONT.npArtist,COL.text2,tx,by+50,titleWidth,18);
+  }
   // center: transport row + seekbar
   var cxC=Math.round(W/2);
   var pcy=by+34, pb=hv(cxC-27,by+7,cxC+27,by+61)?52:48, pbx=cxC-pb/2, pby=pcy-pb/2;
-  ctrlBtn(gr,'shuffle',cxC-108,pcy,pbShuffle,'shuffle',22,26);
-  ctrlBtn(gr,pbRepeat===2?'repeat1':'repeat',cxC-150,pcy,pbRepeat>0,'repeat',18,22);
+  ctrlBtn(gr,'stop',cxC-108,pcy,false,'stop',22,22);
   ctrlBtn(gr,'prev',cxC-58,pcy,false,'prev',22,26);
   gr.FillEllipse(pbx,pby,pb,pb,COL.text);
   drawIcon(gr,playing?'pause':'play',COL.black,pbx,pby,pb,pb,Math.round(pb*0.5));
   HB_CTRL.push({x0:pbx,y0:pby,x1:pbx+pb,y1:pby+pb,act:'play'});
   ctrlBtn(gr,'next',cxC+58,pcy,false,'next',22,26);
-  ctrlBtn(gr,'stop',cxC+108,pcy,false,'stop',22,22);
+  ctrlBtn(gr,'shuffle',cxC+108,pcy,pbShuffle,'shuffle',18,22);
+  ctrlBtn(gr,pbRepeat===2?'repeat1':'repeat',cxC+146,pcy,pbRepeat>0,'repeat',18,22);
   var sbW=Math.min(Math.round(W*0.36),560), sbX=cxC-sbW/2, sbY=by+74;
   var len=fb.PlaybackLength, pos=(drag==='seek')?dragFrac:(len>0?fb.PlaybackTime/len:0);
   HB_SEEK=drawTrackBar(gr,sbX,sbY,sbW,5,COL.seekbg,pos);
@@ -50,9 +54,9 @@ function drawBar(gr){
   // Hide on narrow layouts rather than overlap Repeat or Volume.
   HB_AUDIO=[];
   var audioX=volX-78, audioY=gearC-18;
-  if(audioX>=cxC+138){
+  if(audioX>=cxC+172){
     var ah=36, ahov=hv(audioX,audioY,audioX+36,audioY+ah);
-    drawIcon(gr,'audioSettings',(ahov||audioPopup)?COL.text:COL.text2,audioX,audioY,36,ah,22);
+    drawIcon(gr,'audioSettings',fb.StopAfterCurrent?COL.green:(ahov||audioPopup)?COL.text:COL.text2,audioX,audioY,36,ah,22);
     HB_AUDIO.push({x0:audioX,y0:audioY,x1:audioX+36,y1:audioY+ah});
   }
   drawIcon(gr,'volume',COL.text2,volX-32,gearC-13,26,26,22);

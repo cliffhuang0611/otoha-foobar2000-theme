@@ -2,8 +2,23 @@
    Part of Verdant, a Spotify-style theme for foobar2000. Loaded by main.js;
    every module shares one global scope, so load order is set there. */
 
+var HB_ARTQUEUE=null;
+function artistQueueHandles(block){
+  var handles=[];
+  for(var b=0;b<artistAlbums.length;b++)if(block===undefined||b===block)
+    for(var i=0;i<artistAlbums[b].tracks.length;i++)handles.push(artistAlbums[b].tracks[i].handle);
+  return handles;
+}
+function enqueueArtistHandles(handles){
+  handles=handles.slice(0);
+  rememberArtistQueueOrder(handles);
+  if(pbShuffle)shuffleArr(handles);
+  for(var i=0;i<handles.length;i++)plman.AddItemToPlaybackQueue(handles[i]);
+  queueViewportCache=null;repaintAll();
+}
 function drawArtist(gr,r){
   HB_TR=[];
+  HB_ARTQUEUE=null;
   var pad=M.cpad, x0=r.x+pad, w=r.w-pad*2, bottom=r.y+r.h-12, i;
   // header artwork = the artist's first album that actually HAS art. artistAlbums is already one
   // entry per album, so it is the candidate list directly -- no scan, no dedupe (art loads async)
@@ -31,6 +46,7 @@ function drawArtist(gr,r){
   tL(gr,'ARTIST',FONT.eyebrow,COL.text,tx,ay+10,tw,18);
   tL(gr,viewArtist,fitHeaderFont(gr,viewArtist,tw),COL.text,tx,ay+30,tw,70);
   tL(gr,artistAlbums.length+' albums '+CH_DOT+' '+songs+' songs in your library',FONT.meta,COL.text2,tx,ay+112,tw,22);
+  if(tw>=140)HB_ARTQUEUE=drawPill(gr,tx,r.y+178,Math.min(tw,pillW(gr,'Queue all albums')),'Queue all albums',false);
   ART_MAXBLOCK=Math.max(0,artistAlbums.length-1);
   var y=r.y+236;
   for(var b=artScroll;b<artistAlbums.length;b++){
@@ -38,7 +54,7 @@ function drawArtist(gr,r){
     var al=artistAlbums[b];
     drawRounded(gr,x0,y,72,6,al.handle,al.album);
     tL(gr,al.album,FONT.sect2,COL.text,x0+88,y+6,w-88,26);
-    tL(gr,(al.year||'')+' '+CH_DOT+' '+al.tracks.length+' songs',FONT.meta,COL.text2,x0+88,y+38,w-88,20);
+    tL(gr,(al.year?al.year+' '+CH_DOT+' ':'')+al.tracks.length+' songs',FONT.meta,COL.text2,x0+88,y+38,w-88,20);
     var ty=y+84, rows=al.display?al.display.rows:albumDisplayRows(al.tracks).rows;
     for(var ri=(b===artScroll?artistRowStart:0);ri<rows.length;ri++){
       var row=rows[ri];

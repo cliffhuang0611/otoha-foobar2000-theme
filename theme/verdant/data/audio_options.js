@@ -5,6 +5,7 @@ var audioPopup=null, HB_AUDIO=[], AUDIO_ROW_HB=[];
 function audioChoiceItems(kind){
   var raw=[],out=[],i,e;
   try{
+    if(kind==='scheduler')return {items:[{name:'Stop after current song',active:!!fb.StopAfterCurrent,index:0}],error:''};
     var data=kind==='output'?fb.GetOutputDevices():fb.GetDSPPresets();
     raw=typeof data==='string'?JSON.parse(data):data;
     if(!raw || !Array.isArray(raw)) throw new Error('Invalid list returned by JSplitter');
@@ -19,6 +20,7 @@ function audioChoiceItems(kind){
   }
 }
 function audioActiveName(kind){
+  if(kind==='scheduler')return fb.StopAfterCurrent?'Stops after current song':'Off';
   var data=audioPopup&&audioPopup.lists[kind],a=data?data.items:[];
   for(var i=0;i<a.length;i++) if(a[i].active) return a[i].name;
   return a.length?'No active '+(kind==='output'?'device':'preset'):'None';
@@ -26,12 +28,12 @@ function audioActiveName(kind){
 function audioOpen(){
   if(!HB_AUDIO.length) return;
   audioPopup={sub:'',first:0,page:0,rootRect:null,subRect:null,
-    lists:{output:audioChoiceItems('output'),dsp:audioChoiceItems('dsp')}};
+    lists:{output:audioChoiceItems('output'),dsp:audioChoiceItems('dsp'),scheduler:audioChoiceItems('scheduler')}};
   AUDIO_ROW_HB=[];repaintAll();
 }
 function audioClose(){if(audioPopup){audioPopup=null;AUDIO_ROW_HB=[];repaintAll();}}
 function audioFocus(kind){
-  if(!audioPopup || (kind!=='output'&&kind!=='dsp') || audioPopup.sub===kind) return;
+  if(!audioPopup || (kind!=='output'&&kind!=='dsp'&&kind!=='scheduler') || audioPopup.sub===kind) return;
   audioPopup.sub=kind;audioPopup.first=0;
   var a=audioPopup.lists[kind].items;
   for(var i=0;i<a.length;i++) if(a[i].active){audioPopup.first=Math.max(0,i-2);break;}
@@ -46,7 +48,11 @@ function audioApply(row){
   audioPopup=null;AUDIO_ROW_HB=[];
   try{
     if(row.section==='output') fb.SetOutputDevice(choice.output_id,choice.device_id);
-    else fb.SetDSPPreset(choice.index);
+    else if(row.section==='dsp')fb.SetDSPPreset(choice.index);
+    else if(row.section==='scheduler'){
+      var enabled=!fb.StopAfterCurrent;
+      restoreUpNextStop();fb.StopAfterCurrent=enabled;queueViewportCache=null;
+    }
   }catch(e){try{fb.ShowPopupMessage('Could not change audio setting:\n'+String(e),'Verdant');}catch(ignore){}}
   repaintAll();
 }
@@ -70,16 +76,16 @@ function audioHitSection(x,y){
 function drawAudioMenu(gr){
   AUDIO_ROW_HB=[];
   if(!audioPopup||!HB_AUDIO.length) return;
-  var m=audioPopup,btn=HB_AUDIO[0],w=244,rh=50,pad=5,h=rh*2+pad*2;
+  var m=audioPopup,btn=HB_AUDIO[0],w=244,rh=50,pad=5,h=rh*3+pad*2;
   var x=Math.max(8,Math.min(btn.x1-w,W-w-8)),y=Math.max(8,btn.y0-h); // flush with audio button: no 6px gap
   m.rootRect={x0:x,y0:y,x1:x+w,y1:y+h};
   gr.FillSolidRect(x+3,y+4,w,h,RGBA(0,0,0,130));
   gr.FillRoundRect(x,y,w,h,8,8,RGB(43,43,43));
-  var sections=['output','dsp'],labels=['Output device','DSP preset'];
-  for(var i=0;i<2;i++){
+  var sections=['output','dsp','scheduler'],labels=['Output device','DSP preset','Scheduler'];
+  for(var i=0;i<sections.length;i++){
     var section=sections[i],top=y+pad+i*rh,sel=m.sub===section;
     if(sel||hv(x,top,x+w,top+rh))gr.FillRoundRect(x+4,top,w-8,rh,5,5,sel?RGB(60,60,60):COL.hover);
-    drawIcon(gr,section==='output'?'headphones':'equalizer',COL.text2,x+12,top+11,25,25,17);
+    drawIcon(gr,section==='output'?'headphones':section==='dsp'?'equalizer':'clock',COL.text2,x+12,top+11,25,25,17);
     tL(gr,labels[i],FONT.pl,COL.text,x+44,top+1,w-74,25);
     tL(gr,audioActiveName(section),FONT.plSub,COL.text2,x+44,top+24,w-74,20);
     // Right-pointing chevron for submenu
@@ -106,7 +112,7 @@ function drawAudioMenu(gr){
   m.subRect={x0:sx,y0:sy,x1:sx+sw,y1:sy+sh};
   gr.FillSolidRect(sx+3,sy+4,sw,sh,RGBA(0,0,0,140));
   gr.FillRoundRect(sx,sy,sw,sh,8,8,RGB(48,48,48));
-  tL(gr,m.sub==='output'?'Output device':'DSP preset',FONT.pl,COL.text,sx+15,sy+5,sw-30,29);
+  tL(gr,m.sub==='output'?'Output device':m.sub==='dsp'?'DSP preset':'Scheduler',FONT.pl,COL.text,sx+15,sy+5,sw-30,29);
   gr.FillSolidRect(sx+12,sy+head-2,sw-24,1,COL.line);
   if(!items.length){
     tL(gr,contents.error||('No '+(m.sub==='output'?'devices':'saved presets')),FONT.plSub,COL.text2,sx+14,sy+head,sw-28,srow);

@@ -341,8 +341,21 @@ function openSongMenu(handle,x,y,pl,item,entries){
                {label:'Properties',act:'properties'},
                {label:'Show more options',act:'native'},
                {label:'Delete files...',act:'deletefiles',danger:true}];
+  var albumHandles=null,artistHandles=null;
+  if(view==='artist'){
+    for(var b=0;b<artistAlbums.length;b++){
+      var tracks=artistAlbums[b].tracks;
+      for(var j=0;j<tracks.length;j++)if(queueHandlesEqual(tracks[j].handle,handle)){
+        albumHandles=artistQueueHandles(b);break;
+      }
+      if(albumHandles)break;
+    }
+    artistHandles=artistQueueHandles();
+    if(albumHandles)actions.splice(2,0,{label:'Add this album to queue',act:'enqueuealbum'});
+    actions.splice(albumHandles?3:2,0,{label:'Add all artist albums to queue',act:'enqueueartist'});
+  }
   if(pl!==undefined && canEditPl(pl)) actions.push({label:amount>1?'Remove selected tracks':'Remove from this playlist',act:'trkremove',danger:true});
-  ctxMenu={kind:'song',handle:handle,entries:entries,pl:pl,item:item,x:x,y:y,items:actions,
+  ctxMenu={kind:'song',handle:handle,entries:entries,pl:pl,item:item,x:x,y:y,items:actions,albumHandles:albumHandles,artistHandles:artistHandles,
            destinations:null,subOpen:false,subFirst:0};
   repaintAll();
 }
@@ -401,6 +414,7 @@ function watchFileOperation(handles){
 }
 function commitDeletePrompt(){
   if(!confirmDel)return;
+  if(confirmDel.kind==='queueclear'){confirmDel=null;clearManualQueue();return;}
   if(confirmDel.kind==='clear'){
     var pl=confirmDel.pl;confirmDel=null;
     if(canEditPl(pl)){
@@ -444,6 +458,10 @@ function handleSongMenuAction(act,menu){
     }
   }else if(act==='enqueue'){
     for(i=0;i<handles.length;i++) try{ plman.AddItemToPlaybackQueue(handles[i]); }catch(e){}
+  }else if(act==='enqueuealbum'){
+    enqueueArtistHandles(menu.albumHandles||[]);
+  }else if(act==='enqueueartist'){
+    enqueueArtistHandles(menu.artistHandles||[]);
   }else if(act==='folder'){
     // Explorer opens the folder of the track you right-clicked; opening one window
     // per selected track would be very disruptive for a large range selection.

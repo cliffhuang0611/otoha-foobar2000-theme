@@ -211,3 +211,45 @@ Stop control and retained playback:
   keeps native resume behavior. Explicitly starting another track discards retention.
 - Retention survives panel reloads; stopped track artwork/title remain visible.
 - Clear Up next discards upcoming tracks while keeping a stopped track available.
+
+Transport layout: Stop, Previous, centered Play/Pause, Next, Shuffle, Repeat.
+Shuffle/Repeat use 22 px icons with separate 36 px click targets on the queue side.
+Scrollable Up next and footer:
+- Mouse wheel and dedicated scrollbar scroll only the upcoming tracks; tabs,
+  Now playing and the Clear Up next footer stay fixed.
+- Visible row hitboxes are clipped to the list viewport and retain absolute indices.
+- Dragging near viewport edges automatically scrolls; Escape, focus loss, drop,
+  mouse leave, context menus and panel unload stop the scrolling timer.
+- Footer and context-menu clearing ask for confirmation and are disabled when empty.
+- Upcoming handles are cached between queue/playback/playlist changes so hover
+  and scrolling format only visible rows instead of rebuilding the whole sequence.
+Idle player, scheduling and artist queue actions:
+- Neutral music-note idle artwork with Nothing playing / Ready to play text.
+- Output/DSP settings gain Scheduler > Stop after current song, using native
+  StopAfterCurrent; the settings icon highlights the enabled state.
+- Artist double-click remains album-scoped. Track menus offer this-album and
+  all-artist-albums queue actions; the artist header also offers Queue all albums.
+- Date formatting omits missing/zero years, and artist subtitles omit the separator
+  when no year exists. Valid dates, disc/track order and existing playback stay intact.
+Idle queue and album-batch shuffle fixes:
+- Queue's empty Now playing artwork uses the same neutral music-note design as the bar.
+- Adding an artist album/all albums shuffles the complete added batch when Shuffle is on,
+  without modifying album arrays or the order of previously queued tracks.
+Artist-batch shuffle continuity:
+- Remember album/disc/track order for queued artist batches in a hidden reference playlist.
+- Shuffle toggles reorder live Up next entries instead of falling back to the current
+  album. Remaining tracks, duplicates and other queued entries are retained.
+- Played tracks are not reinserted; reference order survives JSplitter reloads.
+- Explicit new playback or clearing Up next discards the batch reference.
+
+Finite Play order:
+- Replaces the Up next display with the full finite sequence and one highlighted
+  current occurrence. Explicit duplicate occurrences remain separate.
+- Reveals the current row only after a track change/reload or moving that row;
+  manual scrolling is preserved on ordinary redraws. Repeat wrap reveals the top.
+- Repeat all loops the same order without automatic tail reshuffling or appended
+  cycle copies. Repeat one highlights the same current row instead of duplicating it.
+- Full-order dragging/double-click playback preserve the saved playlist; dragging
+  keeps current playback uninterrupted. Stop/Play retains the full sequence/index.
+- Clear upcoming tracks removes future entries after confirmation and stops after
+  the current track. The native scheduler's stop-after-current mode remains available.

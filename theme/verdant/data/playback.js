@@ -19,59 +19,84 @@ var pbShuffle=propStr('Playback: shuffle','true')!=='false',pbRepeat=0;
 function applyPlaybackOrder(){ setOrder(pbRepeat===2?2:(pbRepeat===1?1:0)); }   // native handles repeat only
 function syncOrderFromFb(){ var o=readOrder(); pbRepeat=(o===2)?2:(o===1?1:0); }
 function toggleShuffle(){
+  var pending=upNextEntries(),batchOrder=artistQueueOrder(),batchRanks=Object.create(null),hasBatch=false;
+  for(var i=0;i<batchOrder.length;i++)if(batchRanks[trackKey(batchOrder[i])]===undefined)batchRanks[trackKey(batchOrder[i])]=i;
+  for(var i=0;i<pending.length;i++)if(batchRanks[trackKey(pending[i].handle)]!==undefined){hasBatch=true;break;}
   pbShuffle=!pbShuffle;
-  if(fb.IsPlaying||fb.IsPaused){ if(pbShuffle) shuffleEnterFromCurrent(); else shuffleExitToSource(); }
+  if(hasBatch){
+    var handles=pending.map(function(e){return e.handle;});
+    if(pbShuffle)shuffleArr(handles);
+    else{
+      // Reorder only live entries; never reconstruct one album and discard the
+      // rest of a queued artist batch. Other tracks retain their relative slots.
+      var slots=[],ordered=[];
+      for(var i=0;i<handles.length;i++)if(batchRanks[trackKey(handles[i])]!==undefined){slots.push(i);ordered.push({handle:handles[i],ordinal:i});}
+      ordered.sort(function(a,b){return batchRanks[trackKey(a.handle)]-batchRanks[trackKey(b.handle)]||a.ordinal-b.ordinal;});
+      for(var i=0;i<slots.length;i++)handles[slots[i]]=ordered[i].handle;
+    }
+    installUpNextPlan(handles);
+  }
+  else if(fb.IsPlaying||fb.IsPaused){ if(pbShuffle) shuffleEnterFromCurrent(); else shuffleExitToSource(); }
   else clearShuffleHandoff();
   applyPlaybackOrder(); repaintAll();
   persistQueueState();
 }
-function cycleRepeat(){ pbRepeat=(pbRepeat+1)%3; applyPlaybackOrder(); }
+function cycleRepeat(){pbRepeat=(pbRepeat+1)%3;queueViewportCache=null;applyPlaybackOrder();}
 
 var ROUTE='__verdant_np__'; // hidden playlist used to play library tracks (artist page / search)
 /* ---- shuffle engine: plays from a hidden shuffled copy so "next up" is the real order.
    Reshuffles whenever shuffle is toggled on, or a playlist starts while shuffle is on. */
 var SHUF='__verdant_shuffle__',QUEUE_ORDER='__verdant_queue__',QUEUE_ORDER_ALT='__verdant_queue_alt__',queueOrderSource='',shufSrcName='',lastShufIdx=-1;
 var shuffleHandoff=null;
-var upNextMutation=0,upNextStopState=null,stoppedPlayback='';
+var upNextMutation=0,upNextStopState=null,stoppedPlayback='',stoppedIndex=0,playOrderPreview=null;
 var STOPPED_ORDER='__verdant_stopped__';
-function stoppedTrack(){var pl=playlistOfName(stoppedPlayback);var items=pl>=0?getItems(pl):null;return items&&items.Count?items[0]:null;}
+var ARTIST_QUEUE_ORDER='__verdant_artist_queue_order__';
+function artistQueueOrder(){var pl=playlistOfName(ARTIST_QUEUE_ORDER);return pl>=0?handleArray(pl):[];}
+function rememberArtistQueueOrder(handles){
+  var order=artistQueueOrder().concat(handles),active=plman.ActivePlaylist;
+  var pl=plman.FindOrCreatePlaylist(ARTIST_QUEUE_ORDER,true);
+  try{plman.ClearPlaylist(pl);plman.InsertPlaylistItems(pl,0,songList(order),false);invalidateItems();}
+  finally{plman.ActivePlaylist=active;}
+}
+function clearArtistQueueOrder(){
+  var pl=playlistOfName(ARTIST_QUEUE_ORDER);
+  if(pl>=0){plman.ClearPlaylist(pl);invalidateItems();}
+}
+function stoppedTrack(){var pl=playlistOfName(stoppedPlayback);var items=pl>=0?getItems(pl):null;return items&&stoppedIndex<items.Count?items[stoppedIndex]:null;}
 function clearStoppedPlayback(){
-  var retained=!!stoppedPlayback;stoppedPlayback='';
+  var retained=!!stoppedPlayback;stoppedPlayback='';stoppedIndex=0;
   if(retained&&!upNextMutation){upNextMutation++;try{plman.FlushPlaybackQueue();}finally{upNextMutation--;}}
   persistQueueState();
 }
 function stopPlaybackRetainingQueue(){
   if(!(fb.IsPlaying||fb.IsPaused))return;
   var current=fb.GetNowPlaying();if(!current)return;
-  var entries=upNextEntries(),handles=[current];
-  for(var i=0;i<entries.length;i++)handles.push(entries[i].handle);
+  var entries=playOrderEntries(),handles=[],currentIndex=-1;
+  for(var i=0;i<entries.length;i++){handles.push(entries[i].handle);if(entries[i].current)currentIndex=i;}
+  if(currentIndex<0){handles.unshift(current);currentIndex=0;}
   var pl=plman.FindOrCreatePlaylist(STOPPED_ORDER,true),active=plman.ActivePlaylist;
   upNextMutation++;
   try{
     plman.ClearPlaylist(pl);plman.InsertPlaylistItems(pl,0,songList(handles),false);
     clearShuffleHandoff();plman.FlushPlaybackQueue();restoreUpNextStop();
-    stoppedPlayback=STOPPED_ORDER;invalidateItems();persistQueueState();fb.Stop();
+    stoppedPlayback=STOPPED_ORDER;stoppedIndex=currentIndex;playOrderPreview=null;invalidateItems();persistQueueState();fb.Stop();
   }finally{plman.ActivePlaylist=active;upNextMutation--;}
   repaintAll();
 }
 function playOrPauseRetainingQueue(){
   if((fb.IsPlaying||fb.IsPaused)||!stoppedTrack()){fb.PlayOrPause();return;}
-  var handles=[stoppedTrack()],entries=upNextEntries();
-  for(var i=0;i<entries.length;i++)handles.push(entries[i].handle);
-  var active=plman.ActivePlaylist,target=plman.FindOrCreatePlaylist(QUEUE_ORDER,true);
-  upNextMutation++;
-  try{
-    clearShuffleHandoff();plman.FlushPlaybackQueue();restoreUpNextStop();
-    plman.ClearPlaylist(target);plman.InsertPlaylistItems(target,0,songList(handles),false);
-    clearStoppedPlayback();invalidateItems();plman.ExecutePlaylistDefaultAction(target,0);
-  }finally{plman.ActivePlaylist=active;upNextMutation--;}
+  var entries=playOrderEntries(),index=0;
+  for(var i=0;i<entries.length;i++)if(entries[i].current){index=i;break;}
+  installPlayOrder(entries,-1,index);
   repaintAll();
 }
 function persistQueueState(){
   try{
     var h=shuffleHandoff;
     window.SetProperty('Playback: shuffle',pbShuffle?'true':'false');
-    window.SetProperty('Playback: Up next state',JSON.stringify({source:shufSrcName,queueSource:queueOrderSource,stop:upNextStopState,stopped:stoppedPlayback,
+    var preview=playOrderPreview;
+    window.SetProperty('Playback: Up next state',JSON.stringify({source:shufSrcName,queueSource:queueOrderSource,stop:upNextStopState,stopped:stoppedPlayback,stoppedIndex:stoppedIndex,
+      order:preview?{name:plman.GetPlaylistName(preview.pl),current:preview.current,path:preview.handle.Path,raw:preview.handle.RawPath,sub:preview.handle.SubSong}:null,
       handoff:h?{name:plman.GetPlaylistName(h.pl),item:h.item,path:h.handle.Path,raw:h.handle.RawPath,sub:h.handle.SubSong}:null}));
   }catch(e){}
 }
@@ -81,6 +106,13 @@ function restoreQueueState(){
     shufSrcName=state.source||'';queueOrderSource=state.queueSource||'';
     upNextStopState=typeof state.stop==='boolean'?state.stop:null;
     stoppedPlayback=typeof state.stopped==='string'&&!(fb.IsPlaying||fb.IsPaused)?state.stopped:'';
+    stoppedIndex=typeof state.stoppedIndex==='number'?Math.max(0,state.stoppedIndex):0;
+    var preview=state.order,previewPl=preview?playlistOfName(preview.name):-1,previewItems=previewPl>=0?getItems(previewPl):null;
+    if(previewItems&&preview.current>=0&&preview.current<previewItems.Count){
+      var hnd=previewItems[preview.current],now=fb.GetNowPlaying();
+      if(now&&queueHandlesEqual(now,hnd)&&hnd.Path===preview.path&&hnd.RawPath===preview.raw&&hnd.SubSong===preview.sub)
+        playOrderPreview={pl:previewPl,current:preview.current,handle:hnd};
+    }
     var h=state.handoff,pl=h?playlistOfName(h.name):-1,items=pl>=0?getItems(pl):null;
     if(items&&h.item>=0&&h.item<items.Count){
       var handle=items[h.item];
@@ -125,13 +157,14 @@ function queueShuffleHandoff(pl,item){
   try{plman.AddPlaylistItemToPlaybackQueue(pl,item);}catch(e){shuffleHandoff=null;throw e;}
   persistQueueState();
 }
-function isHiddenPl(nm){ return nm===ROUTE || nm===SHUF || nm===QUEUE_ORDER || nm===QUEUE_ORDER_ALT || nm===STOPPED_ORDER; }
+function isHiddenPl(nm){ return nm===ROUTE || nm===SHUF || nm===QUEUE_ORDER || nm===QUEUE_ORDER_ALT || nm===STOPPED_ORDER || nm===ARTIST_QUEUE_ORDER; }
 function playlistOfName(nm){ for(var i=0;i<plman.PlaylistCount;i++) if(plman.GetPlaylistName(i)===nm) return i; return -1; }
 function handleArray(pi){ var it=getItems(pi), a=[]; if(it){ for(var i=0;i<it.Count;i++) a.push(it[i]); } return a; }
 function sameHandle(a,b){ return !!(a&&b&&a.Path===b.Path); }
 function indexOfHandle(arr,h){ if(!h) return -1; for(var i=0;i<arr.length;i++) if(sameHandle(arr[i],h)) return i; return -1; }
 function shuffleArr(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 function playShuffled(pi,startHandle,name,preservePos){   // build hidden shuffled copy of pi (start first) and play it
+  playOrderPreview=null;
   clearShuffleHandoff();
   var arr=handleArray(pi); if(!arr.length) return;
   shuffleArr(arr);
@@ -194,6 +227,8 @@ function shuffleExitToSource(){   // shuffle OFF: resume the real playlist at th
   queueShuffleHandoff(si,idx+1<it.Count?idx+1:(pbRepeat===1?0:-1));
 }
 function playPlaylistItem(pl,item){   // clicking a track: shuffle-aware
+  playOrderPreview=null;
+  clearArtistQueueOrder();
   clearStoppedPlayback();
   restoreUpNextStop();
   clearShuffleHandoff();
@@ -202,7 +237,7 @@ function playPlaylistItem(pl,item){   // clicking a track: shuffle-aware
 }
 /* Queue rows jump straight to the track -- deliberately NOT playPlaylistItem(), which would
    reshuffle the hidden playlist and throw away the running order the user is looking at. */
-function playQueueNext(pl,item){clearStoppedPlayback();restoreUpNextStop();clearShuffleHandoff();try{plman.ExecutePlaylistDefaultAction(pl,item);}catch(e){} }
+function playQueueNext(pl,item){playOrderPreview=null;clearStoppedPlayback();restoreUpNextStop();clearShuffleHandoff();try{plman.ExecutePlaylistDefaultAction(pl,item);}catch(e){} }
 // manually-queued row: play it and drop it from the queue, it is no longer "up next"
 function playQueueItem(qi){
   var c=null; try{ c=plman.GetPlaybackQueueContents(); }catch(e){ c=null; }
