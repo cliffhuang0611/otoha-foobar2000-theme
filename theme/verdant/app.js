@@ -255,7 +255,7 @@ function layout(){
   // Responsive canvas: prioritise the playlist over the auxiliary queue.
   // Avoid allocating 240px to an invisible panel in compact FancyZones.
   R.navX=g;
-  R.queueW=(W<1180&&!compactQueueOpen?0:M.queueW);
+  R.queueW=W>=1180?M.queueW+40:(compactQueueOpen?M.queueW:0);
   var minNav=W<600?64:148,minMain=W<600?180:300;
   R.queueW=Math.min(R.queueW,Math.max(0,W-minNav-minMain-4*g));
   R.navW=Math.max(minNav,Math.min(sidebarWidth,380,W-R.queueW-minMain-4*g));
@@ -382,7 +382,7 @@ function dismissTransientMenus(){
   repaintAll();
 }
 function on_focus(is_focused){
-  if(!is_focused)dismissTransientMenus();
+  if(!is_focused){if(queueDrag){queueDrag=null;if(drag==='queue')drag=null;}dismissTransientMenus();}
 }
 var trackClickModifiers=null;
 function mouseSelectionModifiers(mask){
@@ -403,6 +403,8 @@ function on_mouse_lbtn_down(x,y,mask){
   }
   if(HB_SEEK && inRect(x,y,HB_SEEK)){ drag='seek'; dragFrac=seekFrac(x); repaintBar(); return; }
   if(HB_VOL && inRect(x,y,HB_VOL)){ drag='vol'; applyVol(x); return; }
+  var queueRow=!fsMode&&queueVisible()&&rightTab==='queue'&&x>=R.queue.x&&x<R.queue.x+R.queue.w&&hit(HB_Q,x,y);
+  if(queueRow){beginQueueDrag(queueRow,x,y);return;}
   if(W<1180 && compactQueueOpen && R.queueW && x>=R.queue.x && y>=R.queue.y && y<R.queue.y+R.queue.h) return;
   if(SBH && inRect(x,y,SBH)){ drag='scrollh'; setScrollH(x); return; }
   if(SBN && inRect(x,y,SBN)){ drag='scrolln'; setScrollN(y); return; }
@@ -415,6 +417,9 @@ function on_mouse_rbtn_up(x,y){
     return true;
   }
   if(ctxMenu||confirmDel||renameEdit||dupPrompt||rgPrompt||audioPopup) return true;   // a modal is open: swallow
+  if(!fsMode&&queueVisible()&&rightTab==='queue'&&inRect(x,y,{x0:R.queue.x,y0:R.queue.y,x1:R.queue.x+R.queue.w,y1:R.queue.y+R.queue.h})){
+    openQueueMenu(x,y);return true;
+  }
   var i;
   // Right-click inside a selection keeps every selected row. Outside it, select the clicked
   // row alone, just like Explorer; the menu then operates on the whole selection.
@@ -436,6 +441,8 @@ function on_mouse_rbtn_up(x,y){
   return false;   // elsewhere: let JSplitter's own panel menu through (Reload / Configure / Properties)
 }
 function playHandleList(handles,idx){
+  restoreUpNextStop();
+  clearShuffleHandoff();
   var arr=[]; for(var i=0;i<handles.length;i++) arr.push(handles[i]);
   var start=arr[idx];
   if(pbShuffle){ shuffleArr(arr); var ci=indexOfHandle(arr,start); if(ci>=0) arr.splice(ci,1); arr.unshift(start); shufSrcName=ROUTE; idx=0; }
@@ -558,6 +565,7 @@ function doCtrl(act){
 function on_mouse_lbtn_up(x,y,mask){
   var clickModifiers=trackClickModifiers||mouseSelectionModifiers(mask);
   trackClickModifiers=null;
+  if(queueDrag){updateQueueDrag(x,y);finishQueueDrag();return;}
   rgTipClear();
   var t;
   if(drag==='sidebar'){
@@ -585,6 +593,7 @@ function on_mouse_lbtn_up(x,y,mask){
     if(t){
       var act=t.act, pl=ctxMenu.pl, nm=ctxMenu.name, itm=ctxMenu.item;
       if(t.disabled)return;
+      if(ctxMenu.kind==='queue'){ctxMenu=null;if(act==='clearqueue')clearManualQueue();return;}
       if(ctxMenu.kind==='pl'){handlePlaylistMenuAction(act,ctxMenu);return;}
       if(ctxMenu.kind==='song'){
         if(act==='destinations'){ ctxMenu.subOpen=true; repaintAll(); return; }
@@ -670,7 +679,7 @@ function on_mouse_lbtn_up(x,y,mask){
   if(view==='home' && (t=hit(HB_HOME_VIEW,x,y))){setHomeViewMode(t.mode);return;}
   if(W<1180 && compactQueueOpen && R.queueW && x>=R.queue.x && y>=R.queue.y && y<R.queue.y+R.queue.h){
     if((t=hit(HB_TABS,x,y))){ rightTab=t.tab; if(rightTab==='lyrics'){loadLyrics();lySnap=true;} else stopLyAnim(); repaintAll(); return; }
-    if((t=hit(HB_Q,x,y))){ if(t.q!==undefined) playQueueItem(t.q); else playQueueNext(t.pl,t.item); repaintAll(); }
+    if((t=hit(HB_Q,x,y)))selectQueueRow(t);
     return;
   }
   if(view==='artist' && HB_ARTBACK && inRect(x,y,HB_ARTBACK)){ view=artistReturnView; HB_ARTBACK=null; repaintAll(); return; }
@@ -691,7 +700,7 @@ function on_mouse_lbtn_up(x,y,mask){
     repaintAll(); return;
   }
   if((t=hit(HB_PL,x,y))){ clearTrackSelection(); plman.ActivePlaylist=t.i; firstRow=firstRowT=0; view='playlist'; repaintAll(); return; }
-  if((t=hit(HB_Q,x,y))){ if(t.q!==undefined) playQueueItem(t.q); else playQueueNext(t.pl,t.item); repaintAll(); return; }
+  if((t=hit(HB_Q,x,y))){selectQueueRow(t);return;}
   /* Rows play on DOUBLE click -- see on_mouse_lbtn_dblclk. The exception is the play glyph that
      replaces the track number on the hovered row: that is a button, and a button takes one click.
      Rows that draw no glyph (search results, the artist page) carry no pg band and so ignore this. */
@@ -723,6 +732,13 @@ function on_mouse_lbtn_dblclk(x,y,mask){
 
   if(editInputActive() && searchTextHit && searchBoxContains(x,y)){ searchSelectWord(searchHitCursor(x)); drag=null; return; }
   if(ctxMenu||confirmDel||renameEdit||sgMenuOpen||plSortMenuOpen||vizMenuOpen||dupPrompt||rgPrompt||audioPopup) return;
+  if(!fsMode&&queueVisible()&&rightTab==='queue'&&x>=R.queue.x&&x<R.queue.x+R.queue.w){
+    var queued=hit(HB_Q,x,y);
+    if(queued){queueDrag=null;if(drag==='queue')drag=null;queueSelection=null;
+      playUpNextRow(queued);
+      return;
+    }
+  }
   if(W<1180 && compactQueueOpen && R.queueW && x>=R.queue.x && y>=R.queue.y && y<R.queue.y+R.queue.h) return;
   var t=hit(HB_TR,x,y);
   if(t) playRow(t);
@@ -782,6 +798,7 @@ function hoverSig(x,y){
 }
 function on_mouse_move(x,y){
   mx=x; my=y;
+  if(queueDrag){updateQueueDrag(x,y);return;}
   if(drag==='sidebar'){
     sidebarWidth=Math.max(64,Math.min(380,x-R.navX-M.gap/2));
     on_size(W,H);repaintAll();return;
@@ -1190,6 +1207,7 @@ function keyboardAction(action){
   return false;
 }
 function on_key_down(vkey){
+  if(vkey===27&&queueDrag){queueDrag=null;if(drag==='queue')drag=null;repaintQueue();return;}
   var ctrl=false,shift=false,alt=false;
   try{ctrl=utils.IsKeyPressed(0x11);shift=utils.IsKeyPressed(0x10);alt=utils.IsKeyPressed(0x12);}catch(e){}
   if(ctrl && !alt && !shift && vkey===116){
@@ -1415,7 +1433,12 @@ function on_library_items_changed(){ libChanged(); }
 
 /* ------------------------- playback callbacks ------------------------- */
 function on_playback_new_track(){
+  restoreUpNextStop();
   updateNP();
+  if(shuffleHandoff){
+    var nextLoc=playingLoc();
+    if(nextLoc&&nextLoc.IsValid&&nextLoc.PlaylistIndex===shuffleHandoff.pl&&nextLoc.PlaylistItemIndex===shuffleHandoff.item){shuffleHandoff=null;persistQueueState();}
+  }
   // shuffle + loop-all: on wrapping from the last shuffled track back to the first, reshuffle the rest
   if(pbShuffle){
     var loc=playingLoc();
@@ -1430,7 +1453,7 @@ function on_playback_new_track(){
 }
 function npChanged(){ updateNP(); repaintAll(); }
 function on_playback_dynamic_info_track(){ npChanged(); }
-function on_playback_stop(){ npChanged(); }
+function on_playback_stop(reason){if(reason!==2){clearShuffleHandoff();restoreUpNextStop();}npChanged();}
 function on_playback_pause(){ npChanged(); }
 function on_playback_time(){
   repaintBar();
@@ -1439,7 +1462,7 @@ function on_playback_time(){
 }
 function on_playback_seek(){ repaintAll(); }
 function on_playback_order_changed(){ syncOrderFromFb(); repaintAll(); }
-function on_playback_queue_changed(){ repaintAll(); }
+function on_playback_queue_changed(){normalizeQueueHandoff();queueSelection=null;repaintAll();}
 function on_volume_change(){ repaintBar(); }
 function on_output_device_changed(){audioChanged('output');}
 function on_dsp_preset_changed(){audioChanged('dsp');}
@@ -1463,6 +1486,7 @@ function on_item_focus_change(){ repaintAll(); }
 layout();
 registerVerdantShortcuts();
 updateNP();
+restoreQueueState();
 syncOrderFromFb(); applyPlaybackOrder();   // normalize native order (we manage shuffle ourselves)
 capVolume();       // pull a remembered volume back under the slider's ceiling
 startMemWatch();   // caches grow into the component's spare memory and back off as it fills

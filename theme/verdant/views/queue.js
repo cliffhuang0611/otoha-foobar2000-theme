@@ -6,6 +6,118 @@
    handle rather than read from a playlist's meta. Cached by path: the queue redraws on every
    hover inside the panel, and two EvalWithMetadb calls per row per frame is pure interop. */
 var qMetaCache={};
+var queueDrag=null,queueSelection=null;
+function queueHandlesEqual(a,b){
+  return !!(a&&b&&a.RawPath===b.RawPath&&a.Path===b.Path&&a.SubSong===b.SubSong);
+}
+function upNextEntries(limit){
+  var out=[],q=plman.GetPlaybackQueueContents(),handoff=shuffleHandoffQueueIndex();
+  limit=limit===undefined?Infinity:limit;
+  for(var i=0;i<q.length&&out.length<limit;i++)if(i!==handoff)
+    out.push({q:i,handle:q[i].Handle});
+  if(upNextStopState!==null)return out;
+  if(!(fb.IsPlaying||fb.IsPaused)&&!(shuffleHandoff&&handoff>=0))return out;
+  var loc=playingLoc(),pl=-1,start=0;
+  if(shuffleHandoff&&handoff>=0){pl=shuffleHandoff.pl;start=shuffleHandoff.item;}
+  else if(pbRepeat===2){
+    var current=fb.GetNowPlaying();if(current&&out.length<limit)out.push({handle:current,repeat:true});return out;
+  }else{
+    // Native queued playlist entries move the playback cursor to their playlist.
+    var last=q.length?q[q.length-1]:null;
+    if(last&&last.PlaylistIndex>=0){pl=last.PlaylistIndex;start=last.PlaylistItemIndex+1;}
+    else if(loc&&loc.IsValid){pl=loc.PlaylistIndex;start=loc.PlaylistItemIndex+1;}
+  }
+  if(pl<0)return out;
+  var items=getItems(pl);
+  if(items)for(var i=start;i<items.Count&&out.length<limit;i++)out.push({pl:pl,item:i,handle:items[i]});
+  // Repeat-all adds the wrapped prefix; repeat-off never wraps to the beginning.
+  if(pbRepeat===1&&items)for(var i=0;i<Math.min(start,items.Count)&&out.length<limit;i++)out.push({pl:pl,item:i,handle:items[i],wrap:true});
+  return out;
+}
+function upNextEqual(a,b){
+  if(a.length!==b.length)return false;
+  for(var i=0;i<a.length;i++)if(a[i].q!==b[i].q||a[i].pl!==b[i].pl||a[i].item!==b[i].item||!queueHandlesEqual(a[i].handle,b[i].handle))return false;
+  return true;
+}
+function selectQueueRow(row){queueSelection={index:row.upIndex,handle:row.handle};repaintQueue();}
+function paintQueueSelection(gr,row,handle){
+  var s=queueSelection;
+  if(s&&s.index===row.upIndex&&queueHandlesEqual(s.handle,handle))
+    gr.FillRoundRect(row.x0,row.y0,row.x1-row.x0,row.y1-row.y0,6,6,COL.rowActive);
+}
+function openQueueMenu(x,y){
+  clearPlaylistNameTooltip();
+  ctxMenu={kind:'queue',x:x,y:y,items:[{label:'Clear Up next',act:'clearqueue',disabled:upNextEntries(1).length===0}]};
+  repaintAll();
+}
+function clearManualQueue(){installUpNextPlan([]);queueSelection=null;queueDrag=null;if(drag==='queue')drag=null;repaintAll();}
+function installUpNextPlan(handles,playNow){
+  var current=fb.GetNowPlaying(),active=plman.ActivePlaylist,loc=playingLoc();
+  if(loc&&loc.IsValid){
+    var source=plman.GetPlaylistName(loc.PlaylistIndex);
+    if(source===SHUF)queueOrderSource=shufSrcName;
+    else if(source!==QUEUE_ORDER&&source!==QUEUE_ORDER_ALT)queueOrderSource=source;
+  }
+  upNextMutation++;
+  try{
+    clearShuffleHandoff();plman.FlushPlaybackQueue();restoreUpNextStop();
+    if(!handles.length){
+      if(fb.IsPlaying||fb.IsPaused){upNextStopState=!!fb.StopAfterCurrent;fb.StopAfterCurrent=true;}
+      persistQueueState();return;
+    }
+    // Alternate copies keep the currently playing playlist intact during edits.
+    var name=loc&&loc.IsValid&&plman.GetPlaylistName(loc.PlaylistIndex)===QUEUE_ORDER?QUEUE_ORDER_ALT:QUEUE_ORDER;
+    var target=plman.FindOrCreatePlaylist(name,true),arr=current?[current].concat(handles):handles.slice();
+    var start=current?1:0;
+    plman.ClearPlaylist(target);plman.InsertPlaylistItems(target,0,songList(arr),false);invalidateItems();
+    if(playNow)plman.ExecutePlaylistDefaultAction(target,start);
+    else queueShuffleHandoff(target,start);
+    persistQueueState();
+  }finally{plman.ActivePlaylist=active;upNextMutation--;}
+}
+function playUpNextRow(row){
+  var entries=upNextEntries();
+  if(!entries[row.upIndex]||!queueHandlesEqual(entries[row.upIndex].handle,row.handle))return;
+  installUpNextPlan(entries.slice(row.upIndex).map(function(e){return e.handle;}),true);
+  queueSelection=null;repaintAll();
+}
+function beginQueueDrag(row,x,y){
+  var loc=playingLoc();
+  queueDrag={row:row,x:x,y:y,moved:false,target:null,entries:upNextEntries(),
+    loc:loc&&loc.IsValid?{pl:loc.PlaylistIndex,item:loc.PlaylistItemIndex}:null};
+}
+function updateQueueDrag(x,y){
+  if(!queueDrag)return;
+  if(!queueDrag.moved&&Math.abs(x-queueDrag.x)+Math.abs(y-queueDrag.y)<6)return;
+  queueDrag.moved=true;drag='queue';queueDrag.target=null;
+  for(var i=0;i<HB_Q.length;i++)if(inRect(x,y,HB_Q[i])){
+    var row=HB_Q[i];queueDrag.target={row:row,after:y>=(row.y0+row.y1)/2};break;
+  }
+  repaintQueue();
+}
+function finishQueueDrag(){
+  try{applyQueueDrag();}
+  catch(e){queueDrag=null;drag=null;fb.ShowPopupMessage('Could not reorder Up next: '+String(e),'Verdant');repaintAll();}
+}
+function applyQueueDrag(){
+  var d=queueDrag;queueDrag=null;drag=null;
+  if(!d)return;
+  if(!d.moved){selectQueueRow(d.row);return;}
+  if(!d.target){repaintQueue();return;}
+  var entries=upNextEntries(),loc=playingLoc();
+  if(!upNextEqual(d.entries,entries)||!!d.loc!==!!(loc&&loc.IsValid)||(d.loc&&(loc.PlaylistIndex!==d.loc.pl||loc.PlaylistItemIndex!==d.loc.item))){repaintQueue();return;}
+  var from=d.row.upIndex,to=d.target.row.upIndex+(d.target.after?1:0);
+  if(to>from)to--;
+  if(to===from){repaintQueue();return;}
+  var entry=entries.splice(from,1)[0];entries.splice(to,0,entry);
+  installUpNextPlan(entries.map(function(e){return e.handle;}));
+  queueSelection={index:to,handle:entry.handle};repaintAll();
+}
+function drawQueueDragMarker(gr){
+  if(!queueDrag||!queueDrag.moved||!queueDrag.target)return;
+  var t=queueDrag.target,row=t.row,y=t.after?row.y1:row.y0;
+  gr.FillSolidRect(row.x0,y-1,row.x1-row.x0,2,COL.green);
+}
 function qRowMeta(h){
   var p=h.Path, e=qMetaCache[p];
   if(!e) e=qMetaCache[p]={t:TF.title.EvalWithMetadb(h), a:TF.artist.EvalWithMetadb(h)};
@@ -24,7 +136,8 @@ function qEntry(gr,r,x,y,cs,dy,h,seed,key,title,artist,tcol){
   tL(gr,title,FONT.qName,tcol,tx,y+dy,tw,18);
   tL(gr,artist,FONT.qArtist,COL.text2,tx,y+dy+20,tw,16);
 }
-function drawQueue(gr){
+function drawQueue(gr){drawQueueContents(gr);drawQueueDragMarker(gr);}
+function drawQueueContents(gr){
   HB_TABS=[]; HB_Q=[];
   var r=R.queue; panelBg(gr,r,COL.base);
   var headerExtra=W<1180&&compactQueueOpen&&r.w<220?36:0;
@@ -54,53 +167,18 @@ function drawQueue(gr){
   qEntry(gr,r,x,qy,48,6,NP,'np',undefined,npTitleStr||'Nothing playing',npArtistStr,(fb.IsPlaying||fb.IsPaused)?COL.green:COL.text);
   qy+=70;
 
-  var rh=56, bottom=r.y+r.h-8, shown=0, qi;
-  // real manual queue (explicitly-queued tracks) first, if any
-  var mq=null; try{ mq=plman.GetPlaybackQueueHandles(); }catch(e){ mq=null; }
-  if(mq && mq.Count){
-    tL(gr,'Next in queue',FONT.sect,COL.text,x,qy,r.w-110,24); qy+=36;
-    for(qi=0;qi<mq.Count && shown<18;qi++){
-      if(qy+rh>bottom) break;
-      var qh=mq[qi]; if(!qh) continue;
-      var qhb=qRow(gr,r,x,qy,rh); qhb.q=qi; HB_Q.push(qhb);
-      var qm=qRowMeta(qh);
-      qEntry(gr,r,x,qy,44,5,qh,'mq'+qi,undefined,qm.t,qm.a,COL.text);
-      qy+=rh; shown++;
-    }
-    qy+=10;
-  }
-  // loop-one: playback just repeats the current song, so show only that
-  if(pbRepeat===2){
-    if(NP && qy+rh+30<bottom){
-      tL(gr,'Repeating this song',FONT.sect,COL.text,x,qy,r.w-36,24); qy+=36;
-      qEntry(gr,r,x,qy,44,5,NP,'np',undefined,npTitleStr,npArtistStr,COL.green);
-    }
+  var rh=56,bottom=r.y+r.h-8;
+  tL(gr,'Up next',FONT.sect,COL.text,x,qy,r.w-36,24);qy+=36;
+  var entries=upNextEntries(Math.max(1,Math.floor((bottom-qy)/rh)));
+  if(!entries.length){
+    tL(gr,(fb.IsPlaying||fb.IsPaused)?'Nothing queued - stops after this track':'Nothing queued',FONT.qArtist,COL.text3,x,qy,r.w-36,36);
     return;
   }
-  // "Next up" from the playing playlist
-  var loc=playingLoc();
-  var pli=(loc&&loc.IsValid)?loc.PlaylistIndex:plman.ActivePlaylist;
-  var start=(loc&&loc.IsValid)?loc.PlaylistItemIndex+1:0;
-  var rawnm=(pli>=0)?plName(pli):'';
-  var pnm=(rawnm===SHUF)?shufSrcName:(rawnm===ROUTE?'':rawnm);   // show the real source, not the hidden copy
-  if(qy+30<bottom){
-    tL(gr,pnm?('Next from: '+pnm):'Next up',FONT.sect,COL.text,x,qy,r.w-110,24); qy+=36;
-    // The playing playlist's metadata is built on ticks like everywhere else -- this runs on the
-    // first paint whatever view you are in, so calling getMeta() inline stalled startup on a large
-    // playlist even when you were nowhere near it.
-    if(pli>=0 && !ensureBuilt('meta'+pli,function(){ return metaReady(pli); },function(){ return metaSteps(pli); })){
-      if(skelVisible('meta'+pli)) skelRows(gr,x,qy,r.w-36,Math.min(bottom-qy,rh*4),rh);
-    }
-    else if(pli>=0){
-      var items=getItems(pli), qmeta=getMeta(pli), cnt=plCount(pli);
-      for(var k=start;k<cnt&&shown<20;k++){
-        if(qy+rh>bottom) break;
-        var h=items[k]; if(!h) continue;
-        var nhb=qRow(gr,r,x,qy,rh); nhb.pl=pli; nhb.item=k; HB_Q.push(nhb);
-        qEntry(gr,r,x,qy,44,5,h,qmeta.album[k]||String(k),qmeta.artkey[k],qmeta.title[k],qmeta.artist[k],COL.text);
-        qy+=rh; shown++;
-      }
-      if(shown===0) tL(gr,'End of playlist',FONT.qArtist,COL.text3,x,qy,r.w-36,18);
-    }
+  for(var i=0;i<entries.length&&qy+rh<=bottom;i++){
+    var e=entries[i],row=qRow(gr,r,x,qy,rh);row.upIndex=i;row.handle=e.handle;
+    HB_Q.push(row);paintQueueSelection(gr,row,e.handle);
+    var meta=qRowMeta(e.handle);
+    qEntry(gr,r,x,qy,44,5,e.handle,'upnext'+i,undefined,meta.t,meta.a,COL.text);
+    qy+=rh;
   }
 }

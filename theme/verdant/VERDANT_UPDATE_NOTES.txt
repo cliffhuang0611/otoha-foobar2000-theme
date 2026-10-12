@@ -175,3 +175,32 @@ Home display modes:
   the sticky heading; controls reserve room for the queue button and scrollbar.
 - Grid/List shares one vertical pixel offset: toggling keeps the visible position,
   clamped to the new layout maximum. The playlist shelf shares its horizontal offset.
+Shuffle toggle continuity:
+- Toggling shuffle no longer starts the current track again or seeks its position.
+- A queued handoff starts the new shuffled/ordered sequence at the next track;
+  existing manually queued tracks keep priority and paused playback stays paused.
+- The internal handoff is shown once in Next from, not duplicated in manual Queue.
+- Rapid toggles replace only Verdant's pending handoff. Explicit playback/stop clears it.
+Queue drag reordering:
+- Drag visible rows within Next in queue or Next from; a green line marks insertion.
+- Manual queue reconstruction preserves handles, duplicates and playlist references.
+- Next from uses a hidden playback-order copy and a queued handoff, keeping source
+  playlist order, current playback position and manual queue priority intact.
+- Small mouse movements retain click-to-play. Escape/focus loss cancels dragging;
+  playback/queue/playlist changes invalidate stale drops. Cross-section drops cancel.
+Queue selection and context menu:
+- Single-click selects a queue row; double-click plays it in both queue sections.
+- Right-click inside the Queue tab panel offers Clear queue. It removes manual
+  entries while retaining Verdant's internal playback handoff and Next from order.
+- Clear queue is disabled when only the hidden handoff (or no entries) remains.
+
+Unified Up next:
+- Replaces Next in queue / Next from with one ordered Up next list.
+- Dragging can reorder any visible row across its original manual/playlist origin.
+- Hidden playback copies alternate to avoid editing the currently playing copy.
+- Panel properties preserve internal handoff identity, source and shuffle state
+  across reloads. Internal entries do not reappear as duplicate queued tracks.
+- Repeat off never wraps at playlist end or previews an unrelated active playlist.
+- Clear Up next lets the current track finish, then stops; the temporary stop flag
+  survives reload and restores when playback stops or a new sequence starts.
+- Double-click starts that row and plays the remaining unified sequence.

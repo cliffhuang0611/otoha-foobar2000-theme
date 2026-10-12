@@ -74,6 +74,18 @@ visualizers, cover mosaics, and ReplayGain remain available.
   Open containing folder, Properties, Delete files, and playlist removal where applicable.
   **Show more options** opens foobar2000's full native track menu, including installed File Operations
   and Converter commands/presets for the selected tracks.
+- **One Up next list** combines explicitly queued tracks and the remaining playlist sequence
+  in playback order. Internal handoff entries are not displayed twice. With repeat off, the list
+  does not wrap or fall back to an unrelated active playlist when playback ends.
+- Drag any visible Up next track before/after another, including across tracks originally queued
+  manually or supplied by the playlist. Reordering uses hidden playback copies, preserving the
+  saved source playlist and the current playing track's position. Queued additions take priority.
+- Single-click selects; double-click starts the selected track and continues with the rest of
+  Up next. Escape cancels dragging; playback or list changes invalidate a stale drop.
+- Right-click the Queue panel for **Clear Up next**: the current track continues, then playback
+  stops. Starting a new track or adding a new queue restores normal continuation.
+- Reordered playback and internal handoff identification survive JSplitter reloads through hidden
+  playlists and saved panel properties. Shuffle toggles do not restart or seek the current track.
 - **Playlist context menu** on sidebar/Home playlist cards and the playlist heading or empty area,
   grouped in this order:
 
@@ -204,8 +216,8 @@ See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional de
 - **All Songs** — your entire library in one virtualised list, optionally grouped by artist, album,
   or both. Handles thousands of tracks without stuttering.
 - **Search** — artists, albums, and tracks, with album pages and multi-token/fuzzy track matching.
-- **Queue / Lyrics pane** — what's actually playing next (real playback queue *and* "next from"),
-  or synced `.lrc` / plain `.txt` lyrics that roll with the track. Click any queue row to jump to it.
+- **Queue / Lyrics pane** — one Up next list showing the upcoming playback sequence,
+  or synced `.lrc` / plain `.txt` lyrics that roll with the track. Double-click a queue row to play it.
 - **Fullscreen mode** — big now-playing art, rolling lyrics, or an FFT audio visualizer fed from
   real PCM. Four visualizer styles.
 - **Normalize volume** — one button that levels your whole library so you stop reaching for the
