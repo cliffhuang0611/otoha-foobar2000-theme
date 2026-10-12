@@ -29,7 +29,13 @@ function repaintMain(){ markDirty(); dirtyMain=true; window.RepaintRect(R.main.x
 function repaintNav(){ markDirty(); dirtyNav=true; window.RepaintRect(R.navLib.x,R.navLib.y,R.navLib.w,R.navLib.h); }
 // drawNav paints both nav cards, so a hover crossing between them must invalidate their union
 function repaintNavAll(){ markDirty(); dirtyNav=true; window.RepaintRect(R.navTop.x,R.navTop.y,R.navTop.w,(R.navLib.y+R.navLib.h)-R.navTop.y); }
-function repaintQueue(){ if(!R.queue || !R.queue.w) return; markDirty(); dirtyQueue=true; window.RepaintRect(R.queue.x,R.queue.y,R.queue.w,R.queue.h); }
+function repaintQueue(){
+  // Windows clips drawing to the invalidated rectangle, even when on_paint takes
+  // the full render path. A floating drag card can cross any panel boundary.
+  if((mainQueueDrag&&mainQueueDrag.moved)||(queueDrag&&queueDrag.moved)){repaintAll();return;}
+  if(!R.queue||!R.queue.w)return;
+  markDirty();dirtyQueue=true;window.RepaintRect(R.queue.x,R.queue.y,R.queue.w,R.queue.h);
+}
 // the visualizer's own band, 30 times a second -- see the fullscreen branch of on_paint
 function repaintViz(){ markDirty(); dirtyViz=true; window.RepaintRect(0,VIZ_TOP,W,Math.max(0,(H-172)-VIZ_TOP)); }
 function repaintTitle(){ markDirty(); dirtyTitle=true; window.RepaintRect(0,0,W,TBH); }
@@ -327,7 +333,7 @@ function on_paint(gr){
   // A partial paint skips drawOverlays, so a modal's dim backdrop would not be reapplied over the
   // region it redraws (the bar's 1 Hz repaint would flash back to full brightness). While an
   // overlay owns the screen, every paint takes the full path.
-  var modal=lyDialog||renameEdit||ctxMenu||confirmDel||dupPrompt||rgPrompt||audioPopup||plSortMenuOpen||sgMenuOpen||rgTipShown;
+  var modal=(mainQueueDrag&&mainQueueDrag.moved)||(queueDrag&&queueDrag.moved)||lyDialog||renameEdit||ctxMenu||confirmDel||dupPrompt||rgPrompt||audioPopup||plSortMenuOpen||sgMenuOpen||rgTipShown;
   if(dirtyAll || !anyPartial || modal || stale){ // full paint, or an OS/stale paint we can't scope
     clearDirty();
     HB_DOTS=[];
@@ -341,6 +347,8 @@ function on_paint(gr){
     drawQueueToggle(gr);
     drawBar(gr);
     drawOverlays(gr);
+    drawPlaylistDropHighlight(gr);
+    drawQueueDragPreview(gr);
     return;
   }
   // partial composite: only the regions actually flagged (each drawn over live content)
@@ -383,6 +391,7 @@ function dismissTransientMenus(){
   repaintAll();
 }
 function on_focus(is_focused){
+  if(!is_focused&&mainQueueDrag)cancelMainQueueDrag();
   if(!is_focused)pointerDown=false;
   if(!is_focused){stopQueueEdgeScroll();if(queueDrag){queueDrag=null;if(drag==='queue')drag=null;}dismissTransientMenus();}
 }
@@ -397,6 +406,11 @@ function on_mouse_lbtn_down(x,y,mask){
   if(lyDialog)return;
   trackClickModifiers=mouseSelectionModifiers(mask);
   if(ctxMenu||confirmDel||renameEdit||sgMenuOpen||plSortMenuOpen||vizMenuOpen||dupPrompt||rgPrompt||audioPopup) return;   // overlays are modal; dismissal/actions handled on button-up
+  queueKeyboardFocus=queuePaneHit(x,y);
+  if(queueKeyboardFocus&&!hit(HB_Q,x,y)){
+    queueSelection=null;
+    if(HB_QUEUE_NP&&inRect(x,y,HB_QUEUE_NP)){var ready=queueCurrentIndex(playOrderEntries());if(ready>=0)selectQueueRow({upIndex:ready,handle:HB_QUEUE_NP.handle});}
+  }
   if(sidebarResizeHit(x,y)){clearPlaylistNameTooltip();drag='sidebar';return;}
 
   if(editInputActive() && searchTextHit && searchBoxContains(x,y)){
@@ -410,10 +424,12 @@ function on_mouse_lbtn_down(x,y,mask){
   if(rightTab==='queue'&&queueVisible()&&SBQ&&inRect(x,y,SBQ)){drag='scrollq';setQueueScroll(y);return;}
   var queueRow=!fsMode&&queueVisible()&&rightTab==='queue'&&x>=R.queue.x&&x<R.queue.x+R.queue.w&&hit(HB_Q,x,y);
   if(queueRow){beginQueueDrag(queueRow,x,y);return;}
+  if(queueKeyboardFocus)return;
   if(W<1180 && compactQueueOpen && R.queueW && x>=R.queue.x && y>=R.queue.y && y<R.queue.y+R.queue.h) return;
   if(SBH && inRect(x,y,SBH)){ drag='scrollh'; setScrollH(x); return; }
   if(SBN && inRect(x,y,SBN)){ drag='scrolln'; setScrollN(y); return; }
   if(SB && inRect(x,y,SB)){ drag='scroll'; setScroll(y); return; }
+  var mainRow=hit(HB_TR,x,y);if(mainRow)beginMainQueueDrag(mainRow,x,y,mask);
 }
 function on_mouse_rbtn_up(x,y){
   rgTipClear();
@@ -423,6 +439,7 @@ function on_mouse_rbtn_up(x,y){
     return true;
   }
   if(ctxMenu||confirmDel||renameEdit||dupPrompt||rgPrompt||audioPopup) return true;   // a modal is open: swallow
+  queueKeyboardFocus=queuePaneHit(x,y);
   if((fsMode&&fsView==='lyrics'&&y<H-172)||(!fsMode&&queueVisible()&&rightTab==='lyrics'&&inRect(x,y,{x0:R.queue.x,y0:R.queue.y+50,x1:R.queue.x+R.queue.w,y1:R.queue.y+R.queue.h}))){
     lyricPanelMenu(x,y);return true;
   }
@@ -579,6 +596,7 @@ function on_mouse_lbtn_up(x,y,mask){
   pointerDown=false;repaintAll();
   if(lyDialogDoubleClickUp){lyDialogDoubleClickUp=false;trackClickModifiers=null;return;}
   if(lyDialog){lyricDialogClick(x,y);return;}
+  if(mainQueueDrag&&finishMainQueueDrag(x,y))return;
   var clickModifiers=trackClickModifiers||mouseSelectionModifiers(mask);
   trackClickModifiers=null;
   if(queueDrag){updateQueueDrag(x,y);finishQueueDrag();return;}
@@ -751,6 +769,7 @@ function playRow(t){
 // every desktop player follows -- including the one this theme is modelled on.
 function on_mouse_lbtn_dblclk(x,y,mask){
   if(lyDialog){lyricDialogDoubleClick(x,y);return;}
+  mainQueueDrag=null;
   var modifiers=mouseSelectionModifiers(mask);
   if(modifiers.shift||modifiers.ctrl)return;
 
@@ -828,6 +847,7 @@ function hoverSig(x,y){
 function on_mouse_move(x,y){
   mx=x; my=y;
   if(lyDialog){clearPlaylistNameTooltip();repaintAll();return;}
+  if(mainQueueDrag){updateMainQueueDrag(x,y);if(mainQueueDrag.moved)return;}
   if(drag==='scrollq'){setQueueScroll(y);return;}
   if(queueDrag){updateQueueDrag(x,y);return;}
   if(drag==='sidebar'){
@@ -876,6 +896,8 @@ function scrollSection(x,y){
   return '';
 }
 function on_mouse_leave(){
+  if(queueDrag&&queueDrag.moved)repaintAll();
+  if(mainQueueDrag)cancelMainQueueDrag();
   pointerDown=false;
   stopQueueEdgeScroll();
   clearPlaylistNameTooltip();
@@ -1241,7 +1263,8 @@ function keyboardAction(action){
   return false;
 }
 function on_key_down(vkey){
-  if(vkey===27&&queueDrag){stopQueueEdgeScroll();queueDrag=null;if(drag==='queue')drag=null;repaintQueue();return;}
+  if(vkey===27&&mainQueueDrag){cancelMainQueueDrag();return;}
+  if(vkey===27&&queueDrag){stopQueueEdgeScroll();queueDrag=null;if(drag==='queue')drag=null;repaintAll();return;}
   var ctrl=false,shift=false,alt=false;
   try{ctrl=utils.IsKeyPressed(0x11);shift=utils.IsKeyPressed(0x10);alt=utils.IsKeyPressed(0x12);}catch(e){}
   if(ctrl && !alt && !shift && vkey===116){
@@ -1265,6 +1288,10 @@ function on_key_down(vkey){
   }
   if(ctxMenu){if(vkey===27)dismissTransientMenus();return;}
   if(dupPrompt || rgPrompt || fsMode)return;
+  if(queueKeyboardFocus&&queueVisible()&&rightTab==='queue'){
+    if(vkey===46){if(!ctrl&&!alt&&queueSelection)removeQueueOccurrence(queueSelection.index,queueSelection.handle);return;}
+    if(ctrl&&!alt&&!shift&&vkey===86){pasteQueueTracks();return;}
+  }
   if(ctrl && !alt && !shift && vkey===78){keyboardAction('newPlaylist');return;} // Ctrl+N
   if(!ctrl && !alt && !shift && vkey===113){keyboardAction('renamePlaylist');return;} // F2
   if(!alt && ctrl && vkey===70){keyboardAction('find');return;}
@@ -1446,6 +1473,7 @@ function on_drag_drop(action,x,y,mask){
   navDropHover=false; plDropHover=false; repaintAll();
 }
 function on_script_unload(){
+  if(mainQueueDrag)cancelMainQueueDrag();
   if(retainedOrderTimer!==null){window.ClearTimeout(retainedOrderTimer);retainedOrderTimer=null;}
   persistQueueState();
   stopLyricRequest();

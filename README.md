@@ -80,6 +80,19 @@ visualizers, cover mosaics, and ReplayGain remain available.
   the accent color, including earlier and upcoming tracks. Repeat all wraps through that same sequence;
   repeat one keeps the current occurrence highlighted rather than adding another copy.
   Deliberately queued duplicate tracks remain separate entries.
+- Right-click a Play order row or press **Delete** with the queue focused to remove that occurrence.
+  The playing/paused occurrence is protected; source playlists and files are kept. Drag main-view
+  track rows into the queue to copy them at the insertion marker, or into blank space below the list
+  to append. Selected tracks retain their source order, and the queue scrolls near its edges.
+  A cursor-following preview shows cover art, title, artist, and the number of tracks being added;
+  reordering within Play order also shows a track preview.
+  Multiple-track drags use stacked covers, a selection count, up to three title/artist previews,
+  and a count of the remaining tracks.
+  Dragging tracks onto a sidebar playlist or Home playlist card appends copies to that playlist.
+  Dropping onto **New playlist** creates and opens a playlist containing the dragged tracks.
+  These targets also accept a track dragged from Play order; locked/automatic playlists reject drops.
+  With the queue focused, **Ctrl+V** pastes tracks after the selected occurrence, or at the end when
+  no row is selected. These edits are included in the retained playback order.
 - Stop retains the full Play order and highlights the track ready to play, including when using
   foobar2000's native Stop command. The retained order and exact current occurrence survive closing
   and reopening foobar2000. Play starts that retained track at 0:00 and continues the same sequence.

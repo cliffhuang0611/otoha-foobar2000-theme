@@ -67,6 +67,7 @@ include('views/album.js');
 include('views/songs.js');
 include('views/search.js');
 include('views/queue.js');
+include('views/queue_edit.js');
 include('views/bar.js');
 include('views/fullscreen.js');
 

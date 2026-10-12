@@ -29,7 +29,7 @@ function schedulePlayOrderSync(){
 }
 function stopQueueEdgeScroll(){if(queueEdgeTimer!==null){window.ClearInterval(queueEdgeTimer);queueEdgeTimer=null;}}
 function queueEdgeDirection(){
-  if(!queueDrag||!queueDrag.moved||!QUEUE_VIEW)return 0;
+  if((!queueDrag||!queueDrag.moved)&&(!mainQueueDrag||!mainQueueDrag.moved)||!QUEUE_VIEW)return 0;
   var v=QUEUE_VIEW,p=queuePointer;
   if(p.x<v.x0||p.x>=v.x1||p.y<v.y0-20||p.y>v.y1+20)return 0;
   return p.y<v.y0+28?-1:p.y>v.y1-28?1:0;
@@ -41,7 +41,7 @@ function trackQueueEdgeScroll(x,y){
     var direction=queueEdgeDirection();
     if(!direction){stopQueueEdgeScroll();return;}
     var next=clampPx(queueScroll+direction*14,QUEUE_MAXPX);
-    if(next!==queueScroll){queueScroll=next;queueDrag.target=null;repaintQueue();}
+    if(next!==queueScroll){queueScroll=next;if(queueDrag)queueDrag.target=null;repaintQueue();}
   },40);
 }
 function setQueueScroll(y){if(SBQ){queueScroll=Math.round(sbFrac(y,SBQ.top,SBQ.h,SBQ.thumbH)*SBQ.maxPx);repaintQueue();}}
@@ -115,7 +115,7 @@ function installPlayOrder(entries,currentIndex,playIndex){
     if(playIndex!==undefined){
       clearStoppedPlayback();playOrderPreview=null;queueRevealPending=true;
       plman.ExecutePlaylistDefaultAction(target,playIndex);
-    }else if(wasStopped){stoppedPlayback=name;stoppedIndex=currentIndex;playOrderPreview=null;}
+    }else if(wasStopped||!(fb.IsPlaying||fb.IsPaused)){stoppedPlayback=name;stoppedIndex=Math.max(0,currentIndex);playOrderPreview=null;}
     else if(currentIndex>=0){
       playOrderPreview={pl:target,current:currentIndex,handle:handles[currentIndex]};
       var next=pbRepeat===2?currentIndex:currentIndex+1;
@@ -131,7 +131,7 @@ function upNextEqual(a,b){
   for(var i=0;i<a.length;i++)if(a[i].q!==b[i].q||a[i].pl!==b[i].pl||a[i].item!==b[i].item||!queueHandlesEqual(a[i].handle,b[i].handle))return false;
   return true;
 }
-function selectQueueRow(row){queueSelection={index:row.upIndex,handle:row.handle};repaintQueue();}
+function selectQueueRow(row){queueKeyboardFocus=true;queueSelection={index:row.upIndex,handle:row.handle};repaintQueue();}
 function paintQueueSelection(gr,row,handle){
   var s=queueSelection;
   if(s&&s.index===row.upIndex&&queueHandlesEqual(s.handle,handle))
@@ -139,6 +139,7 @@ function paintQueueSelection(gr,row,handle){
 }
 var HB_QUEUE_NP=null;
 function openQueueMenu(x,y){
+  queueKeyboardFocus=true;
   stopQueueEdgeScroll();queueDrag=null;if(drag==='queue')drag=null;
   clearPlaylistNameTooltip();
   var row=hit(HB_Q,x,y),handle=row?row.handle:HB_QUEUE_NP&&inRect(x,y,HB_QUEUE_NP)?HB_QUEUE_NP.handle:null;
@@ -146,6 +147,9 @@ function openQueueMenu(x,y){
     if(row)selectQueueRow(row);
     openSongMenu(handle,x,y,undefined,undefined,[{handle:handle}],true);
     ctxMenu.items=ctxMenu.items.filter(function(item){return item.act!=='deletefiles';});
+    var entries=playOrderEntries(),index=row?row.upIndex:queueCurrentIndex(entries);
+    ctxMenu.queueIndex=index;ctxMenu.queueEntries=entries;
+    ctxMenu.items.push({separator:true},{label:'Remove from Play order',act:'queueremove',disabled:index<0||!entries[index]||!!((fb.IsPlaying||fb.IsPaused)&&entries[index].current)});
     ctxMenu.items.push({separator:true},{label:'Clear upcoming tracks',act:'clearqueue',disabled:!hasUpcomingPlayback()});
     repaintAll();return;
   }
@@ -206,11 +210,14 @@ function finishQueueDrag(){
   stopQueueEdgeScroll();
   try{applyQueueDrag();}
   catch(e){queueDrag=null;drag=null;fb.ShowPopupMessage('Could not reorder Up next: '+String(e),'Verdant');repaintAll();}
+  repaintAll();   // clear the cursor preview even when the drop leaves the order unchanged
 }
 function applyQueueDrag(){
   var d=queueDrag;queueDrag=null;drag=null;
   if(!d)return;
   if(!d.moved){selectQueueRow(d.row);return;}
+  var playlistTarget=trackPlaylistDropTarget(queuePointer.x,queuePointer.y);
+  if(playlistTarget){appendDraggedTracks(playlistTarget,[d.row.handle]);return;}
   if(!d.target){repaintQueue();return;}
   var entries=playOrderEntries(),loc=playingLoc();
   if(!upNextEqual(d.entries,entries)||!!d.loc!==!!(loc&&loc.IsValid)||(d.loc&&(loc.PlaylistIndex!==d.loc.pl||loc.PlaylistItemIndex!==d.loc.item))){repaintQueue();return;}
@@ -259,6 +266,7 @@ function drawQueue(gr){
     }
   }
   drawQueueDragMarker(gr);
+  drawQueueInsertionMarker(gr);
 }
 function drawQueueContents(gr){
   HB_QUEUE_NP=null;
