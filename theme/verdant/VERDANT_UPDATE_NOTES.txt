@@ -204,3 +204,10 @@ Unified Up next:
 - Clear Up next lets the current track finish, then stops; the temporary stop flag
   survives reload and restores when playback stops or a new sequence starts.
 - Double-click starts that row and plays the remaining unified sequence.
+Stop control and retained playback:
+- Added Stop beside Next; moved Repeat beside Shuffle without moving Play/Pause.
+- Stop saves the current track and complete Up next sequence in a hidden playlist.
+- Play restarts that track from 0:00 and continues the retained sequence; Pause
+  keeps native resume behavior. Explicitly starting another track discards retention.
+- Retention survives panel reloads; stopped track artwork/title remain visible.
+- Clear Up next discards upcoming tracks while keeping a stopped track available.

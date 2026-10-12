@@ -15,6 +15,11 @@ function upNextEntries(limit){
   limit=limit===undefined?Infinity:limit;
   for(var i=0;i<q.length&&out.length<limit;i++)if(i!==handoff)
     out.push({q:i,handle:q[i].Handle});
+  if(stoppedPlayback&&!(fb.IsPlaying||fb.IsPaused)){
+    var saved=playlistOfName(stoppedPlayback),savedItems=saved>=0?getItems(saved):null;
+    if(savedItems)for(var i=1;i<savedItems.Count&&out.length<limit;i++)out.push({pl:saved,item:i,handle:savedItems[i]});
+    return out;
+  }
   if(upNextStopState!==null)return out;
   if(!(fb.IsPlaying||fb.IsPaused)&&!(shuffleHandoff&&handoff>=0))return out;
   var loc=playingLoc(),pl=-1,start=0;
@@ -52,7 +57,8 @@ function openQueueMenu(x,y){
 }
 function clearManualQueue(){installUpNextPlan([]);queueSelection=null;queueDrag=null;if(drag==='queue')drag=null;repaintAll();}
 function installUpNextPlan(handles,playNow){
-  var current=fb.GetNowPlaying(),active=plman.ActivePlaylist,loc=playingLoc();
+  var wasStopped=!!stoppedPlayback&&!(fb.IsPlaying||fb.IsPaused);
+  var current=wasStopped?stoppedTrack():fb.GetNowPlaying(),active=plman.ActivePlaylist,loc=playingLoc();
   if(loc&&loc.IsValid){
     var source=plman.GetPlaylistName(loc.PlaylistIndex);
     if(source===SHUF)queueOrderSource=shufSrcName;
@@ -61,7 +67,7 @@ function installUpNextPlan(handles,playNow){
   upNextMutation++;
   try{
     clearShuffleHandoff();plman.FlushPlaybackQueue();restoreUpNextStop();
-    if(!handles.length){
+    if(!handles.length&&!wasStopped){
       if(fb.IsPlaying||fb.IsPaused){upNextStopState=!!fb.StopAfterCurrent;fb.StopAfterCurrent=true;}
       persistQueueState();return;
     }
@@ -70,7 +76,8 @@ function installUpNextPlan(handles,playNow){
     var target=plman.FindOrCreatePlaylist(name,true),arr=current?[current].concat(handles):handles.slice();
     var start=current?1:0;
     plman.ClearPlaylist(target);plman.InsertPlaylistItems(target,0,songList(arr),false);invalidateItems();
-    if(playNow)plman.ExecutePlaylistDefaultAction(target,start);
+    if(playNow){clearStoppedPlayback();plman.ExecutePlaylistDefaultAction(target,start);}
+    else if(wasStopped)stoppedPlayback=name;
     else queueShuffleHandoff(target,start);
     persistQueueState();
   }finally{plman.ActivePlaylist=active;upNextMutation--;}
@@ -163,7 +170,7 @@ function drawQueueContents(gr){
   }
 
   var qy=r.y+70+headerExtra;
-  tL(gr,'Now playing',FONT.sect,COL.text,x,qy,r.w-36,24); qy+=36;
+  tL(gr,stoppedPlayback&&!(fb.IsPlaying||fb.IsPaused)?'Stopped':'Now playing',FONT.sect,COL.text,x,qy,r.w-36,24);qy+=36;
   qEntry(gr,r,x,qy,48,6,NP,'np',undefined,npTitleStr||'Nothing playing',npArtistStr,(fb.IsPlaying||fb.IsPaused)?COL.green:COL.text);
   qy+=70;
 

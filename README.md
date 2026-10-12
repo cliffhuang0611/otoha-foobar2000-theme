@@ -86,6 +86,10 @@ visualizers, cover mosaics, and ReplayGain remain available.
   stops. Starting a new track or adding a new queue restores normal continuation.
 - Reordered playback and internal handoff identification survive JSplitter reloads through hidden
   playlists and saved panel properties. Shuffle toggles do not restart or seek the current track.
+- **Stop button** beside Next ends playback immediately and retains the stopped track and Up next
+  order, including across panel reloads. Play restarts that track at 0:00; Pause resumes at its
+  existing position. Starting another track replaces the retained sequence. Repeat sits beside
+  Shuffle, keeping Play/Pause centered.
 - **Playlist context menu** on sidebar/Home playlist cards and the playlist heading or empty area,
   grouped in this order:
 

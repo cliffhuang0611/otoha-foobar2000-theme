@@ -279,7 +279,7 @@ function on_size(w,h){ clearPlaylistNameTooltip(); W=w; H=h; layout(); plCardCac
 // name/count come from the per-playlist caches, not fresh interop: this runs on every paint of the playlist view
 function activePl(){ var i=plman.ActivePlaylist; return {i:i, name:i>=0?plName(i):'', count:i>=0?plCount(i):0}; }
 function updateNP(){
-  var m=(fb.IsPlaying||fb.IsPaused)?fb.GetNowPlaying():null;
+  var m=(fb.IsPlaying||fb.IsPaused)?fb.GetNowPlaying():stoppedTrack();
   NP=m;
   npTitleStr=m?TF.npTitle.EvalWithMetadb(m):'';
   npArtistStr=m?TF.npArtist.EvalWithMetadb(m):'';
@@ -441,6 +441,7 @@ function on_mouse_rbtn_up(x,y){
   return false;   // elsewhere: let JSplitter's own panel menu through (Reload / Configure / Properties)
 }
 function playHandleList(handles,idx){
+  clearStoppedPlayback();
   restoreUpNextStop();
   clearShuffleHandoff();
   var arr=[]; for(var i=0;i<handles.length;i++) arr.push(handles[i]);
@@ -554,7 +555,8 @@ function doPrev(){
   fb.Prev();
 }
 function doCtrl(act){
-  if(act==='play') fb.PlayOrPause();
+  if(act==='play')playOrPauseRetainingQueue();
+  else if(act==='stop')stopPlaybackRetainingQueue();
   else if(act==='next') fb.Next();
   else if(act==='prev') doPrev();
   else if(act==='shuffle') toggleShuffle();
@@ -1433,6 +1435,7 @@ function on_library_items_changed(){ libChanged(); }
 
 /* ------------------------- playback callbacks ------------------------- */
 function on_playback_new_track(){
+  if(stoppedPlayback)clearStoppedPlayback();
   restoreUpNextStop();
   updateNP();
   if(shuffleHandoff){
@@ -1485,8 +1488,8 @@ function on_item_focus_change(){ repaintAll(); }
 
 layout();
 registerVerdantShortcuts();
-updateNP();
 restoreQueueState();
+updateNP();
 syncOrderFromFb(); applyPlaybackOrder();   // normalize native order (we manage shuffle ourselves)
 capVolume();       // pull a remembered volume back under the slider's ceiling
 startMemWatch();   // caches grow into the component's spare memory and back off as it fills

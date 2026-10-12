@@ -97,6 +97,7 @@ var ICONS={
  panelOpen:"<path d='M3 5h18v2H3zm0 12h18v2H3zm0-10h2v10H3zm16 0h2v10h-2zM16 11h-5V8l-4 4 4 4v-3h5z'/>",
  grid:"<path d='M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 0h7v7h-7z'/>",
  list:"<path d='M3 4h3v3H3zm5 0h13v3H8zM3 10h3v3H3zm5 0h13v3H8zM3 16h3v3H3zm5 0h13v3H8z'/>",
+ stop:"<path d='M5 5h14v14H5z'/>",
  panelClose:"<path d='M3 5h18v2H3zm0 12h18v2H3zm0-10h2v10H3zm16 0h2v10h-2zM8 11h5V8l4 4-4 4v-3H8z'/>",
  expand:"<path d='M7 14H5v5h5v-2H7zm-2-4h2V7h3V5H5zm12 7h-3v2h5v-5h-2zM14 5v2h3v3h2V5z'/>",
  compress:"<path d='M5 16h3v3h2v-5H5zm3-8H5v2h5V5H8zm6 11h2v-3h3v-2h-5zm2-11V5h-2v5h5V8z'/>",
