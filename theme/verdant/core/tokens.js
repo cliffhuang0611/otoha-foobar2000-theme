@@ -22,7 +22,7 @@ var COL = {
 };
 var pointerDown=false;
 function accentState(hovered){return hovered?(pointerDown?COL.accentPressed:COL.accentHover):COL.accent;}
-var M = { pad:8, gap:8, navW:190, queueW:240, barH:96, navTopH:84, rowH:56, radius:10, cpad:24, headH:280, artSz:200 };   // navW/queueW: sidebar + queue widths
+var M = { pad:8, gap:8, navW:190, queueW:240, barH:96, navTopH:152, rowH:56, radius:10, cpad:24, headH:280, artSz:200 };   // navW/queueW: sidebar + queue widths
 var PALETTE=[RGB(83,62,140),RGB(30,120,110),RGB(150,64,92),RGB(43,92,160),RGB(120,92,44),RGB(58,120,64),RGB(140,80,120),RGB(52,100,150),RGB(96,72,52),RGB(70,70,96)];
 
 /* ------------------------- fonts (create once) -------------------------
@@ -53,6 +53,7 @@ var GLYPH = {
   shuffle:chr(0xE8B1), repeat:chr(0xE8EE), repeat1:chr(0xE8ED), volume:chr(0xE767),
   headphones:chr(0xE7F6), equalizer:chr(0xE9E9), audioSettings:chr(0xE9E9),
   search:chr(0xE721), home:chr(0xE80F), add:chr(0xE710), more:chr(0xE712), clock:chr(0xE823),
+  back:chr(0xE72B), forward:chr(0xE72A),
   cmin:chr(0xE921), cmax:chr(0xE922), crestore:chr(0xE923), cclose:chr(0xE8BB)
 };
 var CH_DOT=chr(0xB7), CH_BULL=chr(0x2022);
@@ -112,6 +113,8 @@ var ICONS={
  equalizer:"<path d='M10 20h4V4h-4zm-6 0h4v-8H4zm12-11v11h4V9z'/>",
  audioSettings:"<path d='M4 7h9v2H4zm13 0h3v2h-3zM4 15h3v2H4zm7 0h9v2h-9z'/><circle cx='15' cy='8' r='2.7'/><circle cx='9' cy='16' r='2.7'/>",
  chevron:"<path d='M7 10l5 5 5-5z'/>",
+ back:"<path d='M14 4l-8 8 8 8 1.5-1.5L9 12l6.5-6.5z'/>",
+ forward:"<path d='M10 4l8 8-8 8-1.5-1.5L15 12 8.5 5.5z'/>",
  sortAsc:"<path d='M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z'/>",
  sortDesc:"<path d='M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.59-5.58L4 12l8 8 8-8z'/>"
 };

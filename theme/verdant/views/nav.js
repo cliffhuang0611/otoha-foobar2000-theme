@@ -14,19 +14,23 @@ function drawNavRow(gr,y,h,on,hov,pi,name,sub){
 }
 function drawNav(gr){
   HB_PL=[];
-  // top card: Home + Search as two wide icon buttons spanning the sidebar
+  // Four equal square cells: Home/Search above Back/Forward.
   panelBg(gr,R.navTop,COL.base);
-  var m=16, g=12, bh=54, iy=R.navTop.y+Math.round((R.navTop.h-bh)/2);
-  var bw=Math.floor((R.navTop.w-2*m-g)/2);
-  var hx=R.navTop.x+m, sx2=hx+bw+g;
-  var hon=(view==='home'), hhov=hv(hx,iy,hx+bw,iy+bh);
-  if((hon||hhov) && bw>0 && bh>0) gr.FillRoundRect(hx,iy,bw,bh,Math.min(10,bw/2,bh/2),Math.min(10,bw/2,bh/2),hon?COL.rowActive:COL.rowHover);
-  drawIcon(gr,'home',hon?COL.text:COL.text2,hx,iy,bw,bh,26);
-  HB_HOME={x0:hx,y0:iy,x1:hx+bw,y1:iy+bh};
-  var son=(view==='search'), shov=hv(sx2,iy,sx2+bw,iy+bh);
-  if((son||shov) && bw>0 && bh>0) gr.FillRoundRect(sx2,iy,bw,bh,Math.min(10,bw/2,bh/2),Math.min(10,bw/2,bh/2),son?COL.rowActive:COL.rowHover);
-  drawIcon(gr,'search',son?COL.text:COL.text2,sx2,iy,bw,bh,26);
-  HB_SEARCH={x0:sx2,y0:iy,x1:sx2+bw,y1:iy+bh};
+  var m=Math.min(16,R.navTop.w/8,R.navTop.h/8),g=Math.min(12,m);
+  var cell=Math.max(1,Math.min(54,Math.floor((R.navTop.w-2*m-g)/2),Math.floor((R.navTop.h-2*m-g)/2)));
+  var grid=cell*2+g,hx=R.navTop.x+(R.navTop.w-grid)/2,iy=R.navTop.y+(R.navTop.h-grid)/2;
+  HB_NAV=[];
+  var names=['home','search','back','forward'];
+  for(var n=0;n<4;n++){
+    var name=names[n],bx=hx+(n%2)*(cell+g),by=iy+Math.floor(n/2)*(cell+g);
+    var on=name==='home'?view==='home':name==='search'?view==='search':false;
+    var enabled=n<2||(n===2?navPos>0:navPos<navPages.length-1),hot=hv(bx,by,bx+cell,by+cell)&&enabled;
+    var radius=Math.min(10,cell/2);
+    if(on||hot)gr.FillRoundRect(bx,by,cell,cell,radius,radius,on?COL.rowActive:COL.rowHover);
+    drawIcon(gr,name,!enabled?COL.text3:on||hot?COL.text:COL.text2,bx,by,cell,cell,Math.min(26,cell-4));
+    HB_NAV.push({x0:bx,y0:by,x1:bx+cell,y1:by+cell,act:name,disabled:!enabled});
+  }
+  HB_HOME=HB_NAV[0];HB_SEARCH=HB_NAV[1];
   // The canvas gap between the two cards is inside the region repaintNavAll invalidates but is
   // painted by neither of them -- it used to survive only because a full paint cleared the whole
   // window first, so drawNav has to own it now.

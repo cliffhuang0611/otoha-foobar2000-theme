@@ -79,7 +79,7 @@ function stopScrollAnim(){ if(scrollTimer){ window.ClearInterval(scrollTimer); s
 
 function hv(x0,y0,x1,y1){ return mx>=x0 && mx<x1 && my>=y0 && my<y1; }
 var HB_PL=[], HB_TR=[], HB_CTRL=[], HB_TABS=[], HB_SEEK=null, HB_VOL=null, HB_Q=[];
-var HB_CARD=[], HB_HOME=null, HB_CAP=null, HB_MENU=[], SB=null;
+var HB_CARD=[], HB_HOME=null, HB_NAV=[], HB_CAP=null, HB_MENU=[], SB=null;
 var navScroll=0, NAV_MAX=0, SBN=null, HB_ADDPL=null, navDropHover=false;
 // deferred "scroll this playlist into view" -- only drawNav knows the row geometry, so it consumes this
 var navRevealPl=-1;
@@ -245,7 +245,9 @@ function clearPlaylistNameTooltip(){
 function updatePlaylistNameTooltip(x,y){
   if(drag||ctxMenu||renameEdit||confirmDel||(view==='home'&&hit(HB_HOME_VIEW,x,y))){clearPlaylistNameTooltip();return;}
   var row=hit(HB_PL,x,y),card=hit(HB_CARD,x,y),text='';
-  if(row&&row.truncated)text=plName(row.i);
+  var nav=hit(HB_NAV,x,y);
+  if(nav)text=nav.act==='home'?'Home (Ctrl+Home)':nav.act==='search'?'Search (Ctrl+F)':nav.act==='back'?'Back (Alt+Left)':'Forward (Alt+Right)';
+  else if(row&&row.truncated)text=plName(row.i);
   else if(card&&card.kind==='pl'&&card.truncated)text=plName(card.id);
   if(text===playlistNameTooltipText)return;
   clearPlaylistNameTooltip();
@@ -270,8 +272,9 @@ function layout(){
   R.mainW=Math.max(1,R.queueW ? R.queueX-g-R.mainX : W-g-R.mainX);
   if(W<1180 && R.queueW) R.queueX=W-g-R.queueW;
   var topH=R.top.bottom-R.top.y;
-  R.navTop={x:R.navX,y:top0,w:R.navW,h:M.navTopH};
-  R.navLib={x:R.navX,y:top0+M.navTopH+g*2,w:R.navW,h:topH-M.navTopH-g*2};   // wider gap to the library card
+  var navTopHeight=Math.min(M.navTopH,Math.max(64,Math.floor(topH*0.35)));
+  R.navTop={x:R.navX,y:top0,w:R.navW,h:navTopHeight};
+  R.navLib={x:R.navX,y:top0+navTopHeight+g*2,w:R.navW,h:topH-navTopHeight-g*2};
   R.main={x:R.mainX,y:top0,w:R.mainW,h:topH};
   R.queue={x:R.queueX,y:top0,w:R.queueW,h:topH};
   // frameless; the title-bar strip minus our 3 buttons becomes an OS caption (drag/dbl-click)
@@ -309,7 +312,7 @@ function on_paint(gr){
   // This is a safe compact fallback, not a forced Windows minimum size.
   if(W < 520 || H < 300){
     clearDirty();
-    HB_ARTBACK=null; HB_HOME=null; HB_SEARCH=null;
+    HB_ARTBACK=null; HB_HOME=null; HB_SEARCH=null;HB_NAV=[];
     HB_CARD=[]; HB_TR=[]; HB_PL=[]; HB_Q=[];
     gr.FillSolidRect(0,0,Math.max(1,W),Math.max(1,H),COL.black);
     if(W > 120 && H > 110){
@@ -728,8 +731,12 @@ function on_mouse_lbtn_up(x,y,mask){
   if((t=hit(HB_TABS,x,y))){ rightTab=t.tab; if(rightTab==='lyrics'){ loadLyrics(); lySnap=true; } else stopLyAnim(); repaintAll(); return; }
   if((t=hit(HB_AUDIO,x,y))){ audioOpen(); return; }
   if((t=hit(HB_CTRL,x,y))){ doCtrl(t.act); return; }
-  if(HB_HOME && inRect(x,y,HB_HOME)){ view='home'; repaintAll(); return; }
-  if(HB_SEARCH && inRect(x,y,HB_SEARCH)){ view='search'; repaintAll(); return; }
+  if((t=hit(HB_NAV,x,y))){
+    if(t.disabled)return;
+    if(t.act==='back'||t.act==='forward')navTravel(t.act==='back'?-1:1);
+    else{navObserveView();view=t.act;queueKeyboardFocus=false;repaintAll();}
+    return;
+  }
   if(HB_ALLSONGS && inRect(x,y,HB_ALLSONGS)){ if(view!=='songs'){ view='songs'; songsScroll=songsScrollT=0; if(songsIdx)buildSongsRows(); } repaintAll(); return; }
   if(HB_ADDPL && inRect(x,y,HB_ADDPL)){ keyboardCreatePlaylist(); return; }
   if(HB_PLADD_FILES && inRect(x,y,HB_PLADD_FILES)){ addFilesToPl(plman.ActivePlaylist); return; }
@@ -835,6 +842,7 @@ function hoverSig(x,y){
   if((i=hitIdx(HB_TABS,x,y))>=0) return 't'+i;
   if(HB_HOME && inRect(x,y,HB_HOME)) return 'h';
   if(HB_SEARCH && inRect(x,y,HB_SEARCH)) return 's';
+  if((i=hitIdx(HB_NAV,x,y))>=0)return 'nav'+i;
   if(view==='artist' && HB_ARTBACK && inRect(x,y,HB_ARTBACK)) return 'artistBack';
   if(view==='artist'&&HB_ARTQUEUE&&inRect(x,y,HB_ARTQUEUE))return 'artistQueueAll';
   if(view==='album' && HB_ALBBACK && inRect(x,y,HB_ALBBACK)) return 'albumBack';
@@ -1238,6 +1246,7 @@ function keyboardRemoveSelected(fromDisk){
    global actions such as Ctrl+L can move away from an active editor. */
 function keyboardAction(action){
   if(renameEdit||ctxMenu||confirmDel||dupPrompt||rgPrompt||audioPopup||fsMode)return false;
+  if(action==='goHome'){navObserveView();view='home';queueKeyboardFocus=false;repaintAll();return true;}
   if(action==='newPlaylist')return keyboardCreatePlaylist();
   if(action==='renamePlaylist')return keyboardRenamePlaylist();
   if(action==='globalSearch')return keyboardGlobalSearch();
@@ -1288,6 +1297,7 @@ function on_key_down(vkey){
   }
   if(ctxMenu){if(vkey===27)dismissTransientMenus();return;}
   if(dupPrompt || rgPrompt || fsMode)return;
+  if(ctrl&&!alt&&!shift&&vkey===36){keyboardAction('goHome');return;}
   if(queueKeyboardFocus&&queueVisible()&&rightTab==='queue'){
     if(vkey===46){if(!ctrl&&!alt&&queueSelection)removeQueueOccurrence(queueSelection.index,queueSelection.handle);return;}
     if(ctrl&&!alt&&!shift&&vkey===86){pasteQueueTracks();return;}
@@ -1372,7 +1382,8 @@ var verdantShortcuts=[
   [4711,'Go back','back'],[4712,'Go forward','forward'],
   [4713,'Focus global search','globalSearch'],[4714,'Refresh Verdant view','refresh'],
   [4715,'Leave Search / Back','leaveSearch'],
-  [4716,'New playlist','newPlaylist'],[4717,'Rename active playlist','renamePlaylist']
+  [4716,'New playlist','newPlaylist'],[4717,'Rename active playlist','renamePlaylist'],
+  [4718,'Go to Home','goHome']
 ];
 var verdantRegistered=[];
 function registerVerdantShortcuts(){

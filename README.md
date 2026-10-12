@@ -156,6 +156,11 @@ visualizers, cover mosaics, and ReplayGain remain available.
 ### Search, metadata, lyrics, and audio controls
 
 - Search includes **artists, albums, and tracks**, with an album detail page.
+- Sidebar navigation uses a 2x2 icon grid: Home/Search above Back/Forward, with shortcut tooltips
+  and unavailable history directions dimmed. **Ctrl+Home** goes Home; **Alt+Left/Alt+Right** traverse
+  visited views and restore their scroll positions. Mouse 4/5 cannot be reliably intercepted by
+  the installed JSplitter 3.8.12 theme APIs; a mouse-device application profile can map them to
+  Alt+Left/Alt+Right without an AutoHotkey helper.
 - Multi-token track matching across title, artist, album artist, and album, including partial words
   and limited typo tolerance. Ctrl+F filters All Songs and playlists without modifying their contents;
   in other views it opens global Search.

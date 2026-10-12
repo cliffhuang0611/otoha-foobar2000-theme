@@ -3,6 +3,7 @@ Verdant — keyboard shortcuts (JSplitter 3.8.12)
 When Verdant has keyboard focus:
  Page Up / Page Down      Scroll the current page
  Home / End              Jump to top / bottom
+ Ctrl+Home               Go to Home (retains navigation history)
  Delete                  Playlist tracks selected: remove from playlist; none selected: confirm deleting playlist
                          Library tracks selected: confirm deleting music files from disk
  Shift+Delete            Also confirms file deletion (playlist tracks included)
@@ -12,6 +13,7 @@ When Verdant has keyboard focus:
  Enter                   Play first selected track in display order
  Shift+Enter             Queue all selected tracks in display order
  Alt+Left / Alt+Right    Navigate backward/forward through Verdant page history
+                         Also available as Back / Forward in the sidebar's 2x2 navigation panel
  Ctrl+L                  Open Verdant global Search
  Ctrl+F                  Filter the current playlist / All Songs, or go to Search
  F5                      Refresh the current view
