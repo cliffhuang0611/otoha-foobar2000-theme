@@ -1446,6 +1446,8 @@ function on_drag_drop(action,x,y,mask){
   navDropHover=false; plDropHover=false; repaintAll();
 }
 function on_script_unload(){
+  if(retainedOrderTimer!==null){window.ClearTimeout(retainedOrderTimer);retainedOrderTimer=null;}
+  persistQueueState();
   stopLyricRequest();
   stopPlayOrderSync();
   stopQueueEdgeScroll();
@@ -1504,7 +1506,17 @@ function on_playback_new_track(){
 }
 function npChanged(){ updateNP(); repaintAll(); }
 function on_playback_dynamic_info_track(){ npChanged(); }
-function on_playback_stop(reason){if(reason!==2){stopPlayOrderSync();playOrderPreview=null;clearShuffleHandoff();restoreUpNextStop();}npChanged();}
+function on_playback_stop(reason){
+  if(reason!==2){
+    stopPlayOrderSync();
+    try{var state=JSON.parse(propStr('Playback: Up next state','{}'));restoreRetainedPlayOrder(state.resume);}catch(e){}
+    upNextMutation++;
+    try{playOrderPreview=null;clearShuffleHandoff();if(stoppedTrack())plman.FlushPlaybackQueue();restoreUpNextStop();}
+    finally{upNextMutation--;}
+    persistQueueState();
+  }
+  npChanged();
+}
 function on_playback_pause(){ npChanged(); }
 function on_playback_time(){
   repaintBar();
@@ -1513,7 +1525,7 @@ function on_playback_time(){
 }
 function on_playback_seek(){ repaintAll(); }
 function on_playback_order_changed(){syncOrderFromFb();queueViewportCache=null;repaintAll();}
-function on_playback_queue_changed(){normalizeQueueHandoff();schedulePlayOrderSync();queueViewportCache=null;queueSelection=null;repaintAll();}
+function on_playback_queue_changed(){normalizeQueueHandoff();schedulePlayOrderSync();queueViewportCache=null;queueSelection=null;if(!upNextMutation)persistQueueState();repaintAll();}
 function on_volume_change(){ repaintBar(); }
 function on_output_device_changed(){audioChanged('output');}
 function on_dsp_preset_changed(){audioChanged('dsp');}
@@ -1539,5 +1551,6 @@ registerVerdantShortcuts();
 restoreQueueState();
 updateNP();
 syncOrderFromFb(); applyPlaybackOrder();   // normalize native order (we manage shuffle ourselves)
+persistQueueState();   // also snapshot playback already active when this panel loads
 capVolume();       // pull a remembered volume back under the slider's ceiling
 startMemWatch();   // caches grow into the component's spare memory and back off as it fills

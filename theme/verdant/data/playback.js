@@ -50,6 +50,7 @@ var SHUF='__verdant_shuffle__',QUEUE_ORDER='__verdant_queue__',QUEUE_ORDER_ALT='
 var shuffleHandoff=null;
 var upNextMutation=0,upNextStopState=null,stoppedPlayback='',stoppedIndex=0,playOrderPreview=null;
 var STOPPED_ORDER='__verdant_stopped__';
+var retainedOrderTimer=null;
 var ARTIST_QUEUE_ORDER='__verdant_artist_queue_order__';
 function artistQueueOrder(){var pl=playlistOfName(ARTIST_QUEUE_ORDER);return pl>=0?handleArray(pl):[];}
 function rememberArtistQueueOrder(handles){
@@ -63,6 +64,27 @@ function clearArtistQueueOrder(){
   if(pl>=0){plman.ClearPlaylist(pl);invalidateItems();}
 }
 function stoppedTrack(){var pl=playlistOfName(stoppedPlayback);var items=pl>=0?getItems(pl):null;return items&&stoppedIndex<items.Count?items[stoppedIndex]:null;}
+function snapshotPlayOrder(){
+  if(!(fb.IsPlaying||fb.IsPaused)||upNextMutation)return null;
+  var entries=playOrderEntries(),handles=[],index=-1;
+  for(var i=0;i<entries.length;i++){handles.push(entries[i].handle);if(entries[i].current)index=i;}
+  if(index<0||!handles.length)return null;
+  var active=plman.ActivePlaylist,pl=plman.FindOrCreatePlaylist(STOPPED_ORDER,false);
+  upNextMutation++;
+  try{
+    var old=getItems(pl),same=old.Count===handles.length;
+    for(var j=0;same&&j<handles.length;j++)same=queueHandlesEqual(old[j],handles[j]);
+    if(!same){plman.ClearPlaylist(pl);plman.InsertPlaylistItems(pl,0,songList(handles),false);invalidateItems();}
+  }finally{plman.ActivePlaylist=active;upNextMutation--;}
+  return {name:STOPPED_ORDER,current:index,path:handles[index].Path,sub:handles[index].SubSong};
+}
+function restoreRetainedPlayOrder(resume){
+  if(!resume||fb.IsPlaying||fb.IsPaused)return;
+  var pl=playlistOfName(resume.name),items=pl>=0?getItems(pl):null,index=resume.current;
+  if(!items||index<0||index>=items.Count||index!==Math.floor(index))return;
+  if(items[index].Path!==resume.path||items[index].SubSong!==resume.sub)return;
+  stoppedPlayback=resume.name;stoppedIndex=index;queueViewportCache=null;queueRevealPending=true;
+}
 function clearStoppedPlayback(){
   var retained=!!stoppedPlayback;stoppedPlayback='';stoppedIndex=0;
   if(retained&&!upNextMutation){upNextMutation++;try{plman.FlushPlaybackQueue();}finally{upNextMutation--;}}
@@ -74,7 +96,7 @@ function stopPlaybackRetainingQueue(){
   var entries=playOrderEntries(),handles=[],currentIndex=-1;
   for(var i=0;i<entries.length;i++){handles.push(entries[i].handle);if(entries[i].current)currentIndex=i;}
   if(currentIndex<0){handles.unshift(current);currentIndex=0;}
-  var pl=plman.FindOrCreatePlaylist(STOPPED_ORDER,true),active=plman.ActivePlaylist;
+  var active=plman.ActivePlaylist,pl=plman.FindOrCreatePlaylist(STOPPED_ORDER,false);
   upNextMutation++;
   try{
     plman.ClearPlaylist(pl);plman.InsertPlaylistItems(pl,0,songList(handles),false);
@@ -92,10 +114,16 @@ function playOrPauseRetainingQueue(){
 }
 function persistQueueState(){
   try{
+    var resume=snapshotPlayOrder();
+    if(!resume&&(fb.IsPlaying||fb.IsPaused)&&upNextMutation){
+      resume=JSON.parse(propStr('Playback: Up next state','{}')).resume||null;
+      if(retainedOrderTimer===null)retainedOrderTimer=window.SetTimeout(function(){retainedOrderTimer=null;if(fb.IsPlaying||fb.IsPaused)persistQueueState();},0);
+    }
+    if(!resume&&stoppedTrack()){var retained=stoppedTrack();resume={name:stoppedPlayback,current:stoppedIndex,path:retained.Path,sub:retained.SubSong};}
     var h=shuffleHandoff;
     window.SetProperty('Playback: shuffle',pbShuffle?'true':'false');
     var preview=playOrderPreview;
-    window.SetProperty('Playback: Up next state',JSON.stringify({source:shufSrcName,queueSource:queueOrderSource,stop:upNextStopState,stopped:stoppedPlayback,stoppedIndex:stoppedIndex,
+    window.SetProperty('Playback: Up next state',JSON.stringify({source:shufSrcName,queueSource:queueOrderSource,stop:upNextStopState,stopped:stoppedPlayback,stoppedIndex:stoppedIndex,resume:resume,
       order:preview?{name:plman.GetPlaylistName(preview.pl),current:preview.current,path:preview.handle.Path,raw:preview.handle.RawPath,sub:preview.handle.SubSong}:null,
       handoff:h?{name:plman.GetPlaylistName(h.pl),item:h.item,path:h.handle.Path,raw:h.handle.RawPath,sub:h.handle.SubSong}:null}));
   }catch(e){}
@@ -107,6 +135,7 @@ function restoreQueueState(){
     upNextStopState=typeof state.stop==='boolean'?state.stop:null;
     stoppedPlayback=typeof state.stopped==='string'&&!(fb.IsPlaying||fb.IsPaused)?state.stopped:'';
     stoppedIndex=typeof state.stoppedIndex==='number'?Math.max(0,state.stoppedIndex):0;
+    if(!(fb.IsPlaying||fb.IsPaused))restoreRetainedPlayOrder(state.resume);
     var preview=state.order,previewPl=preview?playlistOfName(preview.name):-1,previewItems=previewPl>=0?getItems(previewPl):null;
     if(previewItems&&preview.current>=0&&preview.current<previewItems.Count){
       var hnd=previewItems[preview.current],now=fb.GetNowPlaying();
@@ -121,7 +150,12 @@ function restoreQueueState(){
         if(shuffleHandoffQueueIndex()<0)shuffleHandoff=null;
       }
     }
-    if(!(fb.IsPlaying||fb.IsPaused))restoreUpNextStop();
+    if(!(fb.IsPlaying||fb.IsPaused)){
+      if(stoppedTrack()){
+        upNextMutation++;try{plman.FlushPlaybackQueue();shuffleHandoff=null;playOrderPreview=null;}finally{upNextMutation--;}
+      }
+      restoreUpNextStop();
+    }
   }catch(e){shuffleHandoff=null;}
 }
 function restoreUpNextStop(){

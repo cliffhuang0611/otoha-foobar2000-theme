@@ -80,6 +80,9 @@ visualizers, cover mosaics, and ReplayGain remain available.
   the accent color, including earlier and upcoming tracks. Repeat all wraps through that same sequence;
   repeat one keeps the current occurrence highlighted rather than adding another copy.
   Deliberately queued duplicate tracks remain separate entries.
+- Stop retains the full Play order and highlights the track ready to play, including when using
+  foobar2000's native Stop command. The retained order and exact current occurrence survive closing
+  and reopening foobar2000. Play starts that retained track at 0:00 and continues the same sequence.
 - Tracks changing or repeat wrapping automatically reveals the current row. Manual scrolling
   stays put between track changes; hover and ordinary redraws do not pull you back.
 - Drag any visible row to reorder playback without changing the saved playlist or restarting
