@@ -10,6 +10,7 @@ function openPlaylistMenu(pl,x,y){
     {label:'Add files...',act:'addfiles',disabled:!editable},
     {label:'Add folder...',act:'addfolder',disabled:!editable},
     {label:'Paste tracks',act:'paste',disabled:!paste},{separator:true},
+    {label:'Apply displayed sort to playlist',act:'applysort',disabled:!editable||view!=='playlist'||pl!==plman.ActivePlaylist||plSort==='none'},
     {label:'Remove duplicates',act:'dedupe',disabled:!editable},
     {label:'Remove missing files',act:'missing',disabled:!editable},{separator:true},
     {label:'Save playlist...',act:'save'},
@@ -36,6 +37,7 @@ function handlePlaylistMenuAction(act,menu){
   var pl=menu.pl;
   ctxMenu=null;
   if(act==='save')savePlaylistToFile(pl);
+  else if(act==='applysort')applyDisplayedPlaylistSort(pl);
   else if(act==='rename')startRename(pl);
   else if(act==='addfiles')addFilesToPl(pl);
   else if(act==='addfolder')addFolderToPl(pl);
@@ -53,11 +55,31 @@ function handlePlaylistMenuAction(act,menu){
   }else if(act==='clear'||act==='delete')confirmDel={kind:act==='clear'?'clear':'playlist',pl:pl,name:menu.name};
   repaintAll();
 }
+function applyDisplayedPlaylistSort(pl){
+  if(!canEditPl(pl)||view!=='playlist'||pl!==plman.ActivePlaylist||plSort==='none')return;
+  // Use the complete order, never the filtered subset. Original indices distinguish duplicates.
+  var order=buildPlOrder(pl),current=[],changed=false,i;
+  for(i=0;i<order.length;i++){current.push(i);if(order[i]!==i)changed=true;}
+  if(!changed){plSort='none';plFilteredCache=null;repaintAll();return;}
+  try{
+    plman.UndoBackup(pl);
+    // JSplitter 3.8.12 has no ReorderPlaylistItems API. Move occurrences in place;
+    // do not clear/reinsert the playlist or restart its currently playing track.
+    for(i=0;i<order.length;i++){
+      var at=current.indexOf(order[i],i);if(at===i)continue;
+      plman.ClearPlaylistSelection(pl);plman.SetPlaylistSelection(pl,[at],true);
+      if(plman.MovePlaylistSelection(pl,i-at)===false)throw new Error('Playlist item movement was rejected.');
+      current.splice(i,0,current.splice(at,1)[0]);
+    }
+    plSort='none';
+  }catch(e){fb.ShowPopupMessage('Could not apply playlist order: '+String(e)+'\nUse foobar2000 Undo to revert any completed moves.','Verdant');}
+  finally{plman.ClearPlaylistSelection(pl);clearTrackSelection();invalidateItems();repaintAll();}
+}
 /* Export the clicked playlist through foobar2000's native Save Playlist dialog.
    fb.SavePlaylist() saves the ACTIVE playlist; a sidebar right-click can target a
    different playlist, so temporarily activate it and restore the user's active
    playlist afterward. The displayed/sorted order never changes foobar's stored
-   item order, so the exported file retains the playlist's own sequence. */
+   item order until Apply displayed sort is used; export saves the stored sequence. */
 function savePlaylistToFile(pi){
   if(pi<0 || pi>=plman.PlaylistCount) return;
   var old=plman.ActivePlaylist;

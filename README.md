@@ -63,6 +63,8 @@ visualizers, cover mosaics, and ReplayGain remain available.
 - **Default sorting preserves foobar2000's stored playlist order**, including imported M3U8 order.
   Title/Artist/Album sorting changes the display only. The direction button keeps its space but is
   disabled for Default; the previous direction is remembered for named sorts.
+  **Apply displayed sort to playlist** writes the full displayed sort into the stored playlist
+  order, including tracks hidden by a filter, and switches the view back to Default.
 - **Windows-style track selection**: Ctrl-click toggles individual tracks; Shift-click selects ranges;
   Ctrl+Shift-click adds ranges. Arrow-key selection uses the current displayed order. Duplicate
   entries can be selected independently. Modified double-clicks do not start playback.
@@ -108,6 +110,7 @@ visualizers, cover mosaics, and ReplayGain remain available.
   Add folder…
   Paste tracks
   ────────────────────
+  Apply displayed sort to playlist
   Remove duplicates
   Remove missing files
   ────────────────────
@@ -125,8 +128,9 @@ visualizers, cover mosaics, and ReplayGain remain available.
   and keeps the playlist; Delete requires confirmation and removes the playlist. Neither deletes
   audio files. Editing actions are disabled for locked/automatic playlists; Paste is disabled when
   no supported clipboard content is available.
-- **Save playlist** uses foobar2000's native export dialog. Display sorting does not change the
-  exported sequence. Exporting does not establish an automatic link to overwrite an imported M3U8.
+- **Save playlist** uses foobar2000's native export dialog. To export a sorted sequence, first use
+  **Apply displayed sort to playlist** on the open editable playlist, then save as M3U8 and choose
+  the existing file to replace it. Exporting does not automatically overwrite an imported M3U8.
 - Playlist creation and rename shortcuts, plus caret/selection/clipboard editing in the rename dialog.
 - **Confirmed file deletion** is distinct from playlist removal. Library Delete, playlist Shift+Delete,
   and the track menu's Delete files action ask before invoking foobar2000's File Operations command.
