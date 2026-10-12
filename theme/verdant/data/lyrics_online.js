@@ -168,7 +168,7 @@ function drawLyricDialog(gr){
   for(var i=d.first;i<Math.min(rows.length,d.first+page);i++){
     var row=rows[i],ry=top+(i-d.first)*rowH,seconds=Math.round(Number(row.duration)||0),selected=i===d.selected;
     if(selected)gr.FillRoundRect(list.x0+4,ry+3,resultsW-12,rowH-6,6,6,COL.elev);
-    tCE(gr,row.trackName||'Untitled',FONT.pl,selected?COL.green:COL.text,list.x0+12,ry+7,resultsW-30,20);
+    tCE(gr,row.trackName||'Untitled',FONT.pl,selected?COL.accent:COL.text,list.x0+12,ry+7,resultsW-30,20);
     if(rowH>=60){
       tCE(gr,(row.artistName||'')+' - '+(row.albumName||'Unknown album'),FONT.qArtist,COL.text2,list.x0+12,ry+27,resultsW-30,18);
       tL(gr,Math.floor(seconds/60)+':'+('0'+seconds%60).slice(-2)+' / '+(row.syncedLyrics?'Synced':'Plain'),FONT.qArtist,COL.text3,list.x0+12,ry+45,resultsW-30,18);
@@ -198,7 +198,7 @@ function drawLyricDialog(gr){
   var cancel=dlgBtn(gr,bx,by,bw,36,'Cancel',COL.elev,RGB(66,66,66),COL.text);
   var retry=dlgBtn(gr,bx+bw+gap,by,bw,36,'Search again',COL.elev,RGB(66,66,66),COL.text);
   var edit=dlgBtn(gr,bx+2*(bw+gap),by,bw,36,'Edit lyrics',COL.elev,chosen&&valid?RGB(66,66,66):COL.elev,chosen&&valid?COL.text:COL.text3);
-  var use=dlgBtn(gr,bx+3*(bw+gap),by,bw,36,'Use lyrics',chosen&&valid?COL.green:COL.elev,chosen&&valid?RGB(45,215,110):COL.elev,chosen&&valid?COL.black:COL.text3);
+  var use=dlgBtn(gr,bx+3*(bw+gap),by,bw,36,'Use lyrics',chosen&&valid?COL.accent:COL.elev,chosen&&valid?COL.accentHover:COL.elev,chosen&&valid?COL.onAccent:COL.text3);
   LY_DIALOG_HB={panel:{x0:x,y0:y,x1:x+w,y1:y+h},list:list,preview:preview,rows:hits,page:page,cancel:cancel,retry:retry,edit:edit,use:use};
 }
 function lyricDialogClick(x,y){

@@ -225,7 +225,7 @@ function applyQueueDrag(){
 function drawQueueDragMarker(gr){
   if(!queueDrag||!queueDrag.moved||!queueDrag.target)return;
   var t=queueDrag.target,row=t.row,y=t.after?row.y1:row.y0;
-  gr.FillSolidRect(row.x0,y-1,row.x1-row.x0,2,COL.green);
+  gr.FillSolidRect(row.x0,y-1,row.x1-row.x0,2,COL.accent);
 }
 function qRowMeta(h){
   var p=h.Path, e=qMetaCache[p];
@@ -271,7 +271,7 @@ function drawQueueContents(gr){
   var qOn=rightTab==='queue';
   tL(gr,'Queue',FONT.tab,qOn?COL.text:COL.text2,x,r.y+16,80,26);
   tL(gr,'Lyrics',FONT.tab,qOn?COL.text2:COL.text,x+82,r.y+16,80,26);
-  gr.FillSolidRect(qOn?x:x+82,r.y+46,qOn?54:50,3,COL.green);
+  gr.FillSolidRect(qOn?x:x+82,r.y+46,qOn?54:50,3,COL.accent);
   HB_TABS.push({x0:x-6,y0:r.y+8,x1:x+72,y1:r.y+48,tab:'queue'});
   HB_TABS.push({x0:x+76,y0:r.y+8,x1:x+152,y1:r.y+48,tab:'lyrics'});
 
@@ -284,7 +284,7 @@ function drawQueueContents(gr){
       return;
     }
     var viewTop=r.y+64+headerExtra, viewBot=r.y+r.h-84, maxW=r.w-28;
-    if(lyrics.synced) drawRollingLyrics(gr,r.x+14,viewTop,maxW,viewBot,FONT.lyric,COL.green,'c');
+    if(lyrics.synced) drawRollingLyrics(gr,r.x+14,viewTop,maxW,viewBot,FONT.lyric,COL.accent,'c');
     else drawStaticLyrics(gr,r.x+14,maxW,viewTop+6,viewBot,FONT.lyric,0.45);
     drawLyricActions(gr,r.x+18,r.y+r.h-48,r.w-36);
     return;
@@ -292,7 +292,7 @@ function drawQueueContents(gr){
 
   var qy=r.y+70+headerExtra;
   tL(gr,stoppedPlayback&&!(fb.IsPlaying||fb.IsPaused)?'Stopped':'Now playing',FONT.sect,COL.text,x,qy,r.w-36,24);qy+=36;
-  qEntry(gr,r,x,qy,48,6,NP,'np',undefined,npTitleStr||'Nothing playing',npArtistStr,(fb.IsPlaying||fb.IsPaused)?COL.green:COL.text);
+  qEntry(gr,r,x,qy,48,6,NP,'np',undefined,npTitleStr||'Nothing playing',npArtistStr,(fb.IsPlaying||fb.IsPaused)?COL.accent:COL.text);
   if(NP)HB_QUEUE_NP={x0:r.x+10,y0:qy-6,x1:r.x+r.w-24,y1:qy+54,handle:NP};
   qy+=70;
 
@@ -326,8 +326,8 @@ function drawQueueContents(gr){
     var hovered=hv(row.x0,vy0,row.x1,vy1),rowW=r.w-34,isCurrent=!!e.current;
     function paint(g,bx,by){
       if(isCurrent||selected||hovered)g.FillRoundRect(bx,by,rowW,rh-4,6,6,isCurrent||selected?COL.rowActive:COL.rowHover);
-      qEntry(g,{w:r.w-30},bx+8,by+6,44,5,e.handle,'playorder'+i,undefined,meta.t,meta.a,isCurrent?COL.green:COL.text);
-      if(isCurrent)drawIcon(g,fb.IsPaused?'pause':fb.IsPlaying?'equalizer':'stop',COL.green,bx+rowW-17,by+20,14,14,12);
+      qEntry(g,{w:r.w-30},bx+8,by+6,44,5,e.handle,'playorder'+i,undefined,meta.t,meta.a,isCurrent?COL.accent:COL.text);
+      if(isCurrent)drawIcon(g,fb.IsPaused?'pause':fb.IsPlaying?'equalizer':'stop',COL.accent,bx+rowW-17,by+20,14,14,12);
     }
     if(vy0===y&&vy1===y+rh)paint(gr,row.x0,y);
     else{

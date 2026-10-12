@@ -5,17 +5,23 @@
 /* ------------------------- colour helpers ------------------------- */
 function RGB(r,g,b){ return (0xff000000|(r<<16)|(g<<8)|b); }
 function RGBA(r,g,b,a){ return ((a<<24)|(r<<16)|(g<<8)|b); }
+function hexColor(hex){return 0xff000000|parseInt(hex.slice(1),16);}
+function colorAlpha(color,alpha){return (color&0x00ffffff)|(alpha<<24);}
 
 /* ------------------------- tokens -------------------------
    The two knobs worth touching are UISCALE (a panel property now -- see core/props.js) and
    M.navW / M.queueW (sidebar and queue-pane widths). Everything else is derived layout. */
 var COL = {
-  black:RGB(0,0,0), base:RGB(18,18,18), elev:RGB(24,24,24), hover:RGB(42,42,42),
-  text:RGB(255,255,255), text2:RGB(179,179,179), text3:RGB(106,106,106),
-  green:RGB(30,215,96), greenC:RGB(29,185,84),
+  black:hexColor(THEME_COLORS.main), base:hexColor(THEME_COLORS.surface), elev:hexColor(THEME_COLORS.secondary), hover:hexColor(THEME_COLORS.hover),
+  text:hexColor(THEME_COLORS.text), text2:hexColor(THEME_COLORS.textSecondary), text3:hexColor(THEME_COLORS.textMuted),
+  accent:hexColor(THEME_COLORS.accent), accentHover:hexColor(THEME_COLORS.accentHover), accentPressed:hexColor(THEME_COLORS.accentPressed),
+  accentDisabled:hexColor(THEME_COLORS.accentDisabled), onAccent:hexColor(THEME_COLORS.onAccent),
+  danger:hexColor(THEME_COLORS.danger), dangerHover:hexColor(THEME_COLORS.dangerHover), closeHover:hexColor(THEME_COLORS.closeHover),
   rowHover:RGBA(255,255,255,18), rowActive:RGBA(255,255,255,38),
-  line:RGBA(255,255,255,28), seekbg:RGB(77,77,77)
+  line:RGBA(255,255,255,28), seekbg:hexColor(THEME_COLORS.seekRail)
 };
+var pointerDown=false;
+function accentState(hovered){return hovered?(pointerDown?COL.accentPressed:COL.accentHover):COL.accent;}
 var M = { pad:8, gap:8, navW:190, queueW:240, barH:96, navTopH:84, rowH:56, radius:10, cpad:24, headH:280, artSz:200 };   // navW/queueW: sidebar + queue widths
 var PALETTE=[RGB(83,62,140),RGB(30,120,110),RGB(150,64,92),RGB(43,92,160),RGB(120,92,44),RGB(58,120,64),RGB(140,80,120),RGB(52,100,150),RGB(96,72,52),RGB(70,70,96)];
 

@@ -124,8 +124,8 @@ function drawAudioMenu(gr){
   for(i=0;i<m.page;i++){
     var idx=m.first+i,it=items[idx],ry=sy+head+i*srow;
     if(hv(sx,ry,sx+sw,ry+srow)) gr.FillRoundRect(sx+4,ry,sw-8,srow,4,4,COL.hover);
-    if(it.active) gr.FillEllipse(sx+13,ry+srow/2-4,8,8,COL.green);
-    tL(gr,it.name,FONT.plSub,it.active?COL.green:COL.text,sx+29,ry,sw-44,srow);
+    if(it.active) gr.FillEllipse(sx+13,ry+srow/2-4,8,8,COL.accent);
+    tL(gr,it.name,FONT.plSub,it.active?COL.accent:COL.text,sx+29,ry,sw-44,srow);
     AUDIO_ROW_HB.push({x0:sx,y0:ry,x1:sx+sw,y1:ry+srow,type:'item',section:m.sub,idx:idx});
   }
   if(items.length>m.page){

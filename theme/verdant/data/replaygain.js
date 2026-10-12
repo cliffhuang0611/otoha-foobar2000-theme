@@ -82,12 +82,12 @@ function drawRgPrompt(gr){
 }
 
 /* Normalize-volume pill: the same capsule as the group-by dropdown, but a state toggle rather than
-   a menu -- filled green only when normalizing is genuinely in effect (tags present AND playback
+   a menu -- filled with the accent only when normalizing is genuinely in effect (tags present AND playback
    applying them), so it can never claim to be on while doing nothing. */
 function drawNormalizePill(gr,x,y,w,h){
   var on=rgActive(), hot=hv(x,y,x+w,y+h);
-  gr.FillRoundRect(x,y,w,h,h/2,h/2,on?(hot?RGB(45,215,110):COL.green):(hot?RGB(58,58,58):RGBA(0,0,0,90)));
-  var col=on?COL.black:COL.text;
+  gr.FillRoundRect(x,y,w,h,h/2,h/2,on?accentState(hot):(hot?RGB(58,58,58):RGBA(0,0,0,90)));
+  var col=on?COL.onAccent:COL.text;
   drawIcon(gr,'equalizer',col,x+14,y+(h-20)/2,20,20,18);
   tL(gr,'Normalize volume',FONT.pl,col,x+42,y,w-56,h);
   return {x0:x,y0:y,x1:x+w,y1:y+h};
@@ -153,8 +153,8 @@ function drawRgTip(gr){
   gr.FillRoundRect(progX,progY,progW,5,2,2,RGB(85,85,85));
   if(frac>0){
     var fillW=Math.max(1,Math.min(progW,Math.round(progW*frac)));
-    if(fillW<8) gr.FillSolidRect(progX,progY,fillW,5,COL.green);
-    else gr.FillRoundRect(progX,progY,fillW,5,2,2,COL.green);
+    if(fillW<8) gr.FillSolidRect(progX,progY,fillW,5,COL.accent);
+    else gr.FillRoundRect(progX,progY,fillW,5,2,2,COL.accent);
   }
   var suffix=rgScanFailed ? 'ReplayGain scan could not start'
             : st.missing.length ? (fmtNum(st.missing.length)+' remaining ('+Math.round(frac*100)+'% scanned)')

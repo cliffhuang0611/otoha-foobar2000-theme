@@ -8,7 +8,7 @@ function drawNavRow(gr,y,h,on,hov,pi,name,sub){
   var cs=44, cx=R.navLib.x+16, cy=y+(h-cs)/2;
   if(pi>=0) drawPlCover(gr,cx,cy,cs,4,pi,name); else drawLibCover(gr,cx,cy,cs,4);
   var tx=cx+cs+12, tw=R.navLib.x+R.navLib.w-16-tx-(pi>=0?26:0);   // reserve dots space without shifting names on hover
-  tL(gr,name,FONT.pl,on?COL.green:COL.text,tx,y+8,tw,20);
+  tL(gr,name,FONT.pl,on?COL.accent:COL.text,tx,y+8,tw,20);
   tL(gr,sub,FONT.plSub,COL.text2,tx,y+30,tw,16);
   return gr.CalcTextWidth(name,FONT.pl)>Math.max(0,tw);
 }
@@ -82,15 +82,15 @@ function drawAddPlaylist(gr,footTop,footH){
   var bx=R.navLib.x+12, bw=R.navLib.w-24, by=footTop+6, bh=footH-16;
   var hot=hv(bx,by,bx+bw,by+bh), drop=navDropHover;
   var rad=Math.min(10,bw/2,bh/2);
-  if(drop)      gr.FillRoundRect(bx,by,bw,bh,rad,rad,RGBA(30,215,96,26));
+  if(drop)      gr.FillRoundRect(bx,by,bw,bh,rad,rad,colorAlpha(COL.accent,26));
   else if(hot)  gr.FillRoundRect(bx,by,bw,bh,rad,rad,COL.rowHover);
-  strokeRound(gr,bx,by,bw,bh,rad,drop?2:1,drop?COL.green:(hot?COL.text3:COL.line));
+  strokeRound(gr,bx,by,bw,bh,rad,drop?2:1,drop?COL.accent:(hot?COL.text3:COL.line));
   // circular badge, echoing the empty-playlist state in the main panel
   var bs=30, ax=bx+13, ay=by+Math.round((bh-bs)/2);
-  gr.FillEllipse(ax,ay,bs,bs,drop?RGBA(30,215,96,46):RGBA(255,255,255,hot?26:16));
-  drawIcon(gr,'add',drop?COL.green:(hot?COL.text:COL.text2),ax,ay,bs,bs,18);
+  gr.FillEllipse(ax,ay,bs,bs,drop?colorAlpha(COL.accent,46):RGBA(255,255,255,hot?26:16));
+  drawIcon(gr,'add',drop?COL.accent:(hot?COL.text:COL.text2),ax,ay,bs,bs,18);
   var tx=ax+bs+12, tw=bx+bw-12-tx;
-  if(drop){ tL(gr,'Drop to import',FONT.pl,COL.green,tx,by+Math.round((bh-20)/2),tw,20); }
+  if(drop){ tL(gr,'Drop to import',FONT.pl,COL.accent,tx,by+Math.round((bh-20)/2),tw,20); }
   else {
     var ty=by+Math.round((bh-35)/2);          // two-line block, optically centred
     tL(gr,'New playlist',FONT.pl,hot?COL.text:COL.text2,tx,ty,tw,19);

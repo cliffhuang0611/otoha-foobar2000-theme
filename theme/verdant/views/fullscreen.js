@@ -155,7 +155,8 @@ function fftMag(re,im,n){
 function startViz(){ if(!vizTimer){ vizTimer=window.SetInterval(vizUpdate,VIZ_MS); } }
 function stopViz(){ if(vizTimer){ window.ClearInterval(vizTimer); vizTimer=null; } }
 function fsIcon(gr,name,col,x,y,sz,act){
-  drawIcon(gr,name,hv(x-8,y-8,x+sz+8,y+sz+8)?COL.text:col,x,y,sz,sz,sz);
+  var hot=hv(x-8,y-8,x+sz+8,y+sz+8);
+  drawIcon(gr,name,col===COL.accent?accentState(hot):hot?COL.text:col,x,y,sz,sz,sz);
   HB_FS.push({x0:x-8,y0:y-8,x1:x+sz+8,y1:y+sz+8,act:act});
 }
 // name of the real playlist driving playback, or null (e.g. playing from library/search/artist)
@@ -195,17 +196,17 @@ function drawFsLyrics(gr,bot){
   loadLyrics();   // reload for the current track (fast: cached by track; reloads on track change)
   if(noLyrics()){ tC(gr,'No lyrics found',FONT.sect2,COL.text2,0,Math.round(H*0.45),W,40);drawLyricActions(gr,Math.round(W/2)-110,bot-44,220);return; }
   drawLyricActions(gr,Math.round(W/2)-110,bot-44,220);bot-=80;
-  if(lyrics.synced) drawRollingLyrics(gr,140,165,W-280,bot,FONT.fsLyric,COL.green,'c');
+  if(lyrics.synced) drawRollingLyrics(gr,140,165,W-280,bot,FONT.fsLyric,COL.accent,'c');
   else drawStaticLyrics(gr,140,W-280,180,bot,FONT.fsLyric,0.4);
 }
 function vizAlpha(c,a){ return RGBA((c>>16)&255,(c>>8)&255,c&255,a); }
-/* One colour ramp, shared by every style: Verdant green, brightening toward white as a band gets
+/* One colour ramp, shared by every style: theme accent, brightening toward white as a band gets
    louder. Shared rather than repeated, because two call sites matching each other by eye is how
    they drift apart in the first place -- change this and every visualizer changes with it.
    (An earlier version tinted the bars with the cover's dominant colour. It is gone: the styles now
    read as part of the theme rather than as a per-track accent.) */
-var VIZ_PEAK=blend(COL.green,COL.text,0.22);
-function vizCol(v){ return blend(COL.greenC,VIZ_PEAK,clamp01(v*1.3)); }
+var VIZ_PEAK=blend(COL.accent,COL.text,0.22);
+function vizCol(v){ return blend(COL.accentPressed,VIZ_PEAK,clamp01(v*1.3)); }
 /* ---- proportions -------------------------------------------------------------
    Two rules, one borrowed and one the theme's own.
    Borrowed, from Stephen Few's "Bar Widths and the Spaces in Between": the gap between bars should
@@ -241,7 +242,7 @@ var VIZ_RN=36;
 var VIZ_WAVE_AMP=0.42;             // waveform: share of the half-height at full scale
 var VIZ_AXIS=RGBA(255,255,255,14); // the hairline the mirrored halves meet on
 
-// ---- style 1: mirrored pill bars, Verdant green (the original, on the rebuilt analysis) ----
+// ---- style 1: mirrored pill bars, theme accent (the original, on the rebuilt analysis) ----
 function drawVizBars(gr,top,bot){
   var cy=Math.round((top+bot)/2), n=VIZ_N, i;
   var w=W-VIZ_MARGIN*2, cell=w/n, bw=Math.max(3,Math.round(cell/(1+VIZ_GAPR)));
@@ -357,8 +358,8 @@ function drawFsBar(gr){
   HB_CTRL.push({x0:pbx,y0:pby,x1:pbx+pb,y1:pby+pb,act:'play'});
   ctrlBtn(gr,'next',cxC+84,cy,false,'next');
   ctrlBtn(gr,pbRepeat===2?'repeat1':'repeat',cxC+150,cy,pbRepeat>0,'repeat');
-  fsIcon(gr,'equalizer',fsView==='viz'?COL.green:COL.text2,72,cy-13,26,'viz');
-  fsIcon(gr,'mic',fsView==='lyrics'?COL.green:COL.text2,114,cy-13,26,'lyrics');
+  fsIcon(gr,'equalizer',fsView==='viz'?COL.accent:COL.text2,72,cy-13,26,'viz');
+  fsIcon(gr,'mic',fsView==='lyrics'?COL.accent:COL.text2,114,cy-13,26,'lyrics');
   var rx=W-72;
   fsIcon(gr,'compress',COL.text2,rx-26,cy-13,26,'exit');
   var volW=120, volX=rx-26-46-volW, volY=cy-2;

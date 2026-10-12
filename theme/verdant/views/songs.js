@@ -88,14 +88,14 @@ function drawSongs(gr,r){
       if(isTrackSelected({songs:true,ti:row.ti})) gr.FillRoundRect(lx-8,ry,rx-lx+16,gh,4,4,COL.rowActive);
       else if(isHover) gr.FillRoundRect(lx-8,ry,rx-lx+16,gh,4,4,COL.rowHover);
       if(isHover) drawIcon(gr,'play',COL.text,numX,ry,numW,gh,14);
-      else tR(gr,String(row.n),FONT.rowNum,isPlaying?COL.green:COL.text2,numX,ry,numW-8,gh);
+      else tR(gr,String(row.n),FONT.rowNum,isPlaying?COL.accent:COL.text2,numX,ry,numW-8,gh);
       if(flat){
         var cs=40, cy=ry+(gh-cs)/2;
         drawCover(gr,titleX,cy,cs,3,t.h,t.album||t.title,t.artkey);
-        tL(gr,t.title,FONT.rowTitle,isPlaying?COL.green:COL.text,titleX+cs+12,ry+8,titleW-cs-12,20);
+        tL(gr,t.title,FONT.rowTitle,isPlaying?COL.accent:COL.text,titleX+cs+12,ry+8,titleW-cs-12,20);
         tL(gr,t.artist,FONT.rowArtist,COL.text2,titleX+cs+12,ry+30,titleW-cs-12,16);
       } else {
-        tL(gr,t.title,FONT.rowTitle,isPlaying?COL.green:COL.text,titleX,ry,titleW,gh);
+        tL(gr,t.title,FONT.rowTitle,isPlaying?COL.accent:COL.text,titleX,ry,titleW,gh);
       }
       if(showAlbum) tL(gr,t.album,FONT.rowCell,COL.text2,colX,ry,colW,gh);
       else if(showArtist) tL(gr,t.artist,FONT.rowCell,COL.text2,colX,ry,colW,gh);

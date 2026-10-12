@@ -383,6 +383,7 @@ function dismissTransientMenus(){
   repaintAll();
 }
 function on_focus(is_focused){
+  if(!is_focused)pointerDown=false;
   if(!is_focused){stopQueueEdgeScroll();if(queueDrag){queueDrag=null;if(drag==='queue')drag=null;}dismissTransientMenus();}
 }
 var trackClickModifiers=null;
@@ -392,6 +393,7 @@ function mouseSelectionModifiers(mask){
   return {shift:shift,ctrl:ctrl};
 }
 function on_mouse_lbtn_down(x,y,mask){
+  pointerDown=true;repaintAll();
   if(lyDialog)return;
   trackClickModifiers=mouseSelectionModifiers(mask);
   if(ctxMenu||confirmDel||renameEdit||sgMenuOpen||plSortMenuOpen||vizMenuOpen||dupPrompt||rgPrompt||audioPopup) return;   // overlays are modal; dismissal/actions handled on button-up
@@ -574,6 +576,7 @@ function doCtrl(act){
   repaintAll();
 }
 function on_mouse_lbtn_up(x,y,mask){
+  pointerDown=false;repaintAll();
   if(lyDialogDoubleClickUp){lyDialogDoubleClickUp=false;trackClickModifiers=null;return;}
   if(lyDialog){lyricDialogClick(x,y);return;}
   var clickModifiers=trackClickModifiers||mouseSelectionModifiers(mask);
@@ -873,6 +876,7 @@ function scrollSection(x,y){
   return '';
 }
 function on_mouse_leave(){
+  pointerDown=false;
   stopQueueEdgeScroll();
   clearPlaylistNameTooltip();
   var rgWasVisible=rgTipShown;

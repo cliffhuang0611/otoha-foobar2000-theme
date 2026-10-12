@@ -74,12 +74,14 @@ function openLyricsEditor(h,text){
 function lyricsEditorHtml(){return `<!doctype html>
 <html><head><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta charset="utf-8"><title>Edit lyrics</title>
 <style>
-html,body{height:100%;margin:0;background:#171717;color:#ededed;font:14px "Segoe UI",Meiryo,sans-serif;overflow:hidden}
-#header{padding:18px 22px}h2{margin:0 0 6px;font-size:20px}#track{color:#b3b3b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#tools{padding:0 22px 12px}button{border:0;border-radius:18px;background:#303030;color:#b3b3b3;padding:9px 16px;margin-right:8px;font:13px "Segoe UI",Meiryo,sans-serif;cursor:pointer}button:hover{background:#404040;color:white}
-button:disabled{color:#666;cursor:default}#transport{margin-top:10px}#seek{width:240px;vertical-align:middle}#clock{color:#b3b3b3;margin-left:8px;font-size:12px;white-space:nowrap}
-#edit{position:absolute;top:134px;bottom:117px;left:22px;right:22px}textarea{width:100%;height:100%;box-sizing:border-box;resize:none;border:1px solid #414141;border-radius:8px;background:#101010;color:#ededed;padding:12px;font:15px/1.65 Consolas,Meiryo,monospace;overflow:auto}
-#footer{position:absolute;bottom:0;left:0;right:0;padding:14px 22px}#status{height:34px;margin-bottom:8px;color:#b3b3b3;overflow:auto;font-size:12px}#use{background:#1db954;color:black}#hint{font-size:12px;color:#b3b3b3;margin-top:7px}
+html,body{height:100%;margin:0;background:${THEME_COLORS.editorMain};color:${THEME_COLORS.editorText};font:14px "Segoe UI",Meiryo,sans-serif;overflow:hidden}
+#header{padding:18px 22px}h2{margin:0 0 6px;font-size:20px}#track{color:${THEME_COLORS.textSecondary};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tools{padding:0 22px 12px}button{border:0;border-radius:18px;background:${THEME_COLORS.editorButton};color:${THEME_COLORS.textSecondary};padding:9px 16px;margin-right:8px;font:13px "Segoe UI",Meiryo,sans-serif;cursor:pointer}button:hover{background:${THEME_COLORS.editorButtonHover};color:${THEME_COLORS.text}}
+button:disabled{color:${THEME_COLORS.editorDisabled};cursor:default}#transport{margin-top:10px}#seek{width:240px;vertical-align:middle}#clock{color:${THEME_COLORS.textSecondary};margin-left:8px;font-size:12px;white-space:nowrap}
+#edit{position:absolute;top:134px;bottom:117px;left:22px;right:22px}textarea{width:100%;height:100%;box-sizing:border-box;resize:none;border:1px solid ${THEME_COLORS.editorBorder};border-radius:8px;background:${THEME_COLORS.editorField};color:${THEME_COLORS.editorText};padding:12px;font:15px/1.65 Consolas,Meiryo,monospace;overflow:auto}
+#footer{position:absolute;bottom:0;left:0;right:0;padding:14px 22px}#status{height:34px;margin-bottom:8px;color:${THEME_COLORS.textSecondary};overflow:auto;font-size:12px}#use{background:${THEME_COLORS.accent};color:${THEME_COLORS.onAccent}}#hint{font-size:12px;color:${THEME_COLORS.textSecondary};margin-top:7px}
+#use:hover{background:${THEME_COLORS.accentHover}}#use:active{background:${THEME_COLORS.accentPressed}}textarea:focus{outline:1px solid ${THEME_COLORS.accent}}
+#seek::-ms-track{background:transparent;border-color:transparent;color:transparent;height:4px}#seek::-ms-fill-lower{background:${THEME_COLORS.accent}}#seek::-ms-fill-upper{background:${THEME_COLORS.seekRail}}#seek::-ms-thumb{background:${THEME_COLORS.accent};border:0;width:12px;height:12px;border-radius:6px}#seek:hover::-ms-thumb{background:${THEME_COLORS.accentHover}}#seek:active::-ms-thumb{background:${THEME_COLORS.accentPressed}}
 </style></head><body>
 <div id="header"><h2>Edit lyrics</h2><div id="track"></div></div>
 <div id="tools"><button id="stamp" type="button">Add current timestamp (F3)</button><div id="hint">F3 stamps the cursor line. F4 pauses/resumes. F2 / F5 seek back/forward 5 seconds.</div><div id="transport"><button id="toggle" type="button">Play / pause (F4)</button><button id="back" type="button">-5s (F2)</button><button id="forward" type="button">+5s (F5)</button><input id="seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Playback position"><span id="clock"></span></div></div>

@@ -7,10 +7,10 @@
 *A foobar2000 skin that turns the world's most configurable audio player into something
 that looks like a modern streaming app.*
 
-[![Release](https://img.shields.io/github/v/release/superziper/verdant-foobar2000-theme?color=1DB954&label=release)](https://github.com/superziper/verdant-foobar2000-theme/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/superziper/verdant-foobar2000-theme/total?color=1DB954)](https://github.com/superziper/verdant-foobar2000-theme/releases)
-![foobar2000](https://img.shields.io/badge/foobar2000-v2%20·%2064--bit-1DB954)
-![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-1DB954)
+[![Release](https://img.shields.io/github/v/release/superziper/verdant-foobar2000-theme?color=70C4DE&label=release)](https://github.com/superziper/verdant-foobar2000-theme/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/superziper/verdant-foobar2000-theme/total?color=70C4DE)](https://github.com/superziper/verdant-foobar2000-theme/releases)
+![foobar2000](https://img.shields.io/badge/foobar2000-v2%20·%2064--bit-70C4DE)
+![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-70C4DE)
 
 **Personal customizations live on `personal`; `master` retains the upstream theme.**
 
@@ -75,7 +75,7 @@ visualizers, cover mosaics, and ReplayGain remain available.
   **Show more options** opens foobar2000's full native track menu, including installed File Operations
   and Converter commands/presets for the selected tracks.
 - **Play order** shows one finite playback sequence with the current occurrence highlighted in
-  green, including earlier and upcoming tracks. Repeat all wraps through that same sequence;
+  the accent color, including earlier and upcoming tracks. Repeat all wraps through that same sequence;
   repeat one keeps the current occurrence highlighted rather than adding another copy.
   Deliberately queued duplicate tracks remain separate entries.
 - Tracks changing or repeat wrapping automatically reveals the current row. Manual scrolling
@@ -170,7 +170,7 @@ visualizers, cover mosaics, and ReplayGain remain available.
 - One icon beside volume opens **output-device and saved DSP-preset** selectors, with active choices,
   scrolling flyouts, and explicit switching. Unsupported host APIs are handled with a message.
 - The same menu includes **Scheduler → Stop after current song**, using foobar2000's native setting.
-  It can be switched on/off without interrupting the current track; the settings icon is green
+  It can be switched on/off without interrupting the current track; the settings icon uses the accent color
   while enabled. There are no timed stops or extra scheduler components.
 - ReplayGain status is a **hover tooltip** instead of a permanent heading line. It reports tagged
   tracks and remaining unscanned tracks, rather than live scanner progress. Tiny progress values
@@ -349,6 +349,18 @@ Dragging the sidebar or using the artist display buttons applies and saves those
 Queue width and the default sidebar width remain in
 [`theme/verdant/core/tokens.js`](theme/verdant/core/tokens.js).
 
+Theme colors are centralized as hex values in `THEME_COLORS` in
+[`theme/verdant/core/palette.js`](theme/verdant/core/palette.js). Role names stay the same when
+changing the palette: `main` is the outer background, `surface` the panels, `secondary` raised
+surfaces, and `text`, `textSecondary`, and `textMuted` control text. `accent` is the active color,
+with `accentHover`, `accentPressed`, `accentDisabled`, and `onAccent` for interaction states and
+contrasting button text. `danger` and `dangerHover` control destructive actions. `editor*` values
+configure the native lyrics editor's neutral surfaces; its accents use the shared accent roles.
+
+The default accent is Frosted Cyan: **normal `#70C4DE`, hover `#8DD2E6`, pressed `#58AEC8`**.
+Changing these values updates tabs, active controls, selected/playing text, drag highlights,
+primary buttons, the visualizer, and the lyrics editor after deployment and **Ctrl+F5**.
+
 ---
 
 ## Normalize volume
@@ -360,7 +372,7 @@ Under the hood this is **ReplayGain**, which is two separate things — and the 
 1. **A loudness measurement per track**, stored as a `REPLAYGAIN_TRACK_GAIN` tag in the file.
 2. **Playback applying that measurement** (foobar's ReplayGain source mode).
 
-The pill turns **green only when both are true**, so it can never claim to be on while doing nothing.
+The pill turns **accent-colored only when both are true**, so it can never claim to be on while doing nothing.
 Hover the button to see the tagged-track count and remaining unscanned tracks. This status is not
 a live progress report from the native scanner.
 
@@ -368,7 +380,7 @@ a live progress report from the native scanner.
 |---|---|
 | Some tracks unscanned | Asks first, then scans them and switches normalizing on |
 | All scanned, normalizing off | Switches it on — instant, no rescan |
-| Normalizing on (green) | Switches it off. Tags are left alone, so switching back on is instant |
+| Normalizing on (accent) | Switches it off. Tags are left alone, so switching back on is instant |
 
 **The scan writes tags into your audio files**, which is why it asks first. The scan itself is
 foobar's own — its progress window, its *update file tags* confirmation — so you can cancel there and

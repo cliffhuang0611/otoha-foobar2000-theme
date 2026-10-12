@@ -112,7 +112,8 @@ function modalPanel(gr,cw,ch,cy){
 }
 function dlgBtn(gr,x,y,w,h,label,col,hcol,txt){
   var radius=Math.min(20,w/2,h/2);
-  gr.FillRoundRect(x,y,w,h,radius,radius,hv(x,y,x+w,y+h)?hcol:col);
+  var hot=hv(x,y,x+w,y+h);
+  gr.FillRoundRect(x,y,w,h,radius,radius,col===COL.accent?accentState(hot):hot?hcol:col);
   tC(gr,label,FONT.pl,txt,x,y,w,h);
   return {x0:x,y0:y,x1:x+w,y1:y+h};
 }
@@ -156,7 +157,7 @@ function drawOverlays(gr){
       panel:{x0:rx0,y0:ry0,x1:rx0+rw,y1:ry0+rhh},
       input:{x0:ix,y0:iyf,x1:ix+iw,y1:iyf+ih},
       cancel:dlgBtn(gr,ccx,by,bw,bh,'Cancel',RGB(52,52,52),RGB(66,66,66),COL.text),
-      save:dlgBtn(gr,dx,by,bw,bh,'Save',canSave?COL.green:RGB(60,92,74),canSave?RGB(45,215,110):RGB(60,92,74),canSave?COL.black:COL.text3),
+      save:dlgBtn(gr,dx,by,bw,bh,'Save',canSave?COL.accent:COL.accentDisabled,canSave?COL.accentHover:COL.accentDisabled,canSave?COL.onAccent:COL.text3),
       canSave:canSave
     };
   }
@@ -180,7 +181,7 @@ function drawOverlays(gr){
       if(it.act==='destinations') parentY=iy;
       var active=!it.disabled&&(hv(mnx,iy,mnx+iw,iy+ih)||(menu.subOpen&&it.submenu));
       if(active) gr.FillRoundRect(mnx+4,iy,iw-8,ih,5,5,RGBA(255,255,255,20));
-      tL(gr,it.label,FONT.pl,it.disabled?COL.text3:it.danger?RGB(240,96,96):COL.text,mnx+16,iy,iw-(it.submenu?54:24),ih);
+      tL(gr,it.label,FONT.pl,it.disabled?COL.text3:it.danger?COL.dangerHover:COL.text,mnx+16,iy,iw-(it.submenu?54:24),ih);
       if(it.submenu){
         var arx=mnx+iw-22, ary=iy+ih/2;
         gr.DrawLine(arx-4,ary-5,arx+1,ary,2,COL.text2);
@@ -232,7 +233,7 @@ function drawOverlays(gr){
     var cccx=cx+(cw-(cbw*2+buttonGap))/2,cdx=cccx+cbw+buttonGap;
     CONF_HB={
       cancel:dlgBtn(gr,cccx,cby,cbw,cbh,'Cancel',RGB(52,52,52),RGB(66,66,66),COL.text),
-      del:dlgBtn(gr,cdx,cby,cbw,cbh,clear?'Clear':'Delete',RGB(224,72,72),RGB(240,96,96),COL.text)
+      del:dlgBtn(gr,cdx,cby,cbw,cbh,clear?'Clear':'Delete',COL.danger,COL.dangerHover,COL.text)
     };
   }
   if(dupPrompt) drawDupPrompt(gr);
@@ -255,7 +256,7 @@ function tPara(gr,s,f,c,x,y,w,lh){
 function winMaxed(){ if(!UIWizard) return false; try{ return UIWizard.WindowState===1; }catch(e){ return false; } }
 function drawCapBtn(gr,glyph,x,w,isClose){
   var hover=hv(x,0,x+w,TBH);
-  if(hover) gr.FillSolidRect(x,0,w,TBH,isClose?RGB(232,17,35):RGB(48,48,48));
+  if(hover) gr.FillSolidRect(x,0,w,TBH,isClose?COL.closeHover:RGB(48,48,48));
   tC(gr,glyph,FONT.cap,(hover&&isClose)?COL.text:COL.text2,x,0,w,TBH);
 }
 function drawTitleBar(gr){
@@ -301,7 +302,7 @@ function drawDropMenu(gr,anchor,items,cur,minW,avoid){
   for(var i=0;i<items.length;i++){
     var ry=iy+5+i*ih;
     if(hv(bx,ry,bx+bw,ry+ih)) gr.FillRoundRect(bx+4,ry,bw-8,ih,5,5,RGBA(255,255,255,20));
-    tL(gr,items[i][0],FONT.pl,(items[i][1]===cur)?COL.green:COL.text,bx+18,ry,bw-30,ih);
+    tL(gr,items[i][0],FONT.pl,(items[i][1]===cur)?COL.accent:COL.text,bx+18,ry,bw-30,ih);
     out.push({x0:bx,y0:ry,x1:bx+bw,y1:ry+ih,v:items[i][1]});
   }
   return out;

@@ -66,9 +66,9 @@ function drawPlaylist(gr,r){
     var isHover=hv(r.x,ry,r.x+r.w,ry+rh)||isMenuRow;
     if(isTrackSelected({pl:p.i,item:j}) || isMenuRow) gr.FillRoundRect(lx-8,ry,rx-lx+16,rh,4,4,COL.rowActive);
     else if(isHover) gr.FillRoundRect(lx-8,ry,rx-lx+16,rh,4,4,COL.rowHover);
-    var titleCol=isPlaying?COL.green:COL.text;
+    var titleCol=isPlaying?COL.accent:COL.text;
     if(isHover) drawIcon(gr,'play',COL.text,lx,ry,numW,rh,14);
-    else tL(gr,String(d+1),FONT.rowNum,isPlaying?COL.green:COL.text2,lx,ry,numW,rh);
+    else tL(gr,String(d+1),FONT.rowNum,isPlaying?COL.accent:COL.text2,lx,ry,numW,rh);
     var cs=40, cy=ry+(rh-cs)/2, alb=meta.album[j];
     drawCover(gr,titleX,cy,cs,3,h,alb||String(j),meta.artkey[j]);
     var ttx=titleX+cs+12, ttw=titleW-cs-12;
@@ -96,11 +96,11 @@ function drawPlaylist(gr,r){
   // the empty-state zone isn't on screen here, so outline the list itself as the target
   if(plDropHover){
     var iy=rowsTop-rh, ih=cropY-iy, ix=lx-12, iw=rx-lx+24, ir=Math.min(12,iw/2,ih/2);
-    gr.FillRoundRect(ix,iy,iw,ih,ir,ir,RGBA(30,215,96,20));
-    strokeRound(gr,ix,iy,iw,ih,ir,2,COL.green);
+    gr.FillRoundRect(ix,iy,iw,ih,ir,ir,colorAlpha(COL.accent,20));
+    strokeRound(gr,ix,iy,iw,ih,ir,2,COL.accent);
     var lh=34, ly=iy+ih-lh-18, lw=Math.min(iw-32,pillW(gr,'Drop to add to this playlist'));
     if(lw>=lh && ih>lh+36){                                  // radius is lh/2, so lw must clear it
-      gr.FillRoundRect(cxOf(ix,iw,lw),ly,lw,lh,lh/2,lh/2,COL.green);
+      gr.FillRoundRect(cxOf(ix,iw,lw),ly,lw,lh,lh/2,lh/2,COL.accent);
       tC(gr,'Drop to add to this playlist',FONT.pl,COL.black,cxOf(ix,iw,lw),ly,lw,lh);
     }
   }
@@ -132,17 +132,17 @@ function drawPlEmpty(gr,r,top,bottom){
   HB_PLADD_FILES=drawPill(gr,px,y,w1,'Browse files',true);
   HB_PLADD_FOLDER=drawPill(gr,px+w1+gap,y,w2,'Browse folder',false);
 }
-// green wash + rounded outline + label: the shape the cursor is aiming at
+// accent wash + rounded outline + label: the shape the cursor is aiming at
 function drawDropZone(gr,cx,top,availW,availH){
   var bw=Math.min(560,availW), bh=Math.min(260,availH-24);
   var bx=cx-Math.round(bw/2), by=top+Math.round((availH-bh)/2), rad=Math.min(14,bw/2,bh/2);
-  gr.FillRoundRect(bx,by,bw,bh,rad,rad,RGBA(30,215,96,26));
-  strokeRound(gr,bx,by,bw,bh,rad,2,COL.green);
+  gr.FillRoundRect(bx,by,bw,bh,rad,rad,colorAlpha(COL.accent,26));
+  strokeRound(gr,bx,by,bw,bh,rad,2,COL.accent);
   var iy=by+Math.round(bh/2)-40;
-  drawIcon(gr,'add',COL.green,bx,iy,bw,34,34);
-  tC(gr,'Drop to add to this playlist',FONT.sect,COL.green,bx,iy+44,bw,26);
+  drawIcon(gr,'add',COL.accent,bx,iy,bw,34,34);
+  tC(gr,'Drop to add to this playlist',FONT.sect,COL.accent,bx,iy+44,bw,26);
 }
-/* Pill buttons: primary is a solid white capsule with black text, secondary is outlined. Both
+/* Pill buttons: primary uses the accent with contrasting text, secondary is outlined. Both
    nudge outward on hover (no transforms here, so "scale" is a 2px grow) inside a padded hitbox. */
 var PILL_H=42;
 function pillW(gr,label){ return Math.max(140,gr.CalcTextWidth(label,FONT.pl)+48); }
@@ -150,8 +150,8 @@ function drawPill(gr,x,y,w,label,primary){
   var hb={x0:x-3,y0:y-3,x1:x+w+3,y1:y+PILL_H+3};
   var g=hv(hb.x0,hb.y0,hb.x1,hb.y1)?2:0;
   var bx=x-g, by=y-g, bw=w+g*2, bh=PILL_H+g*2, rad=bh/2;
-  if(primary) gr.FillRoundRect(bx,by,bw,bh,rad,rad,COL.text);
+  if(primary) gr.FillRoundRect(bx,by,bw,bh,rad,rad,accentState(!!g));
   else strokeRound(gr,bx,by,bw,bh,rad,g?2:1,g?COL.text:COL.text2);
-  tC(gr,label,FONT.pl,primary?COL.black:COL.text,bx,by,bw,bh);
+  tC(gr,label,FONT.pl,primary?COL.onAccent:COL.text,bx,by,bw,bh);
   return hb;
 }

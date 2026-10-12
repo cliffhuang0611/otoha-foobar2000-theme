@@ -4,7 +4,8 @@
 
 function ctrlBtn(gr,name,cx,cyc,active,act,rad,isz){
   rad=rad||18; isz=isz||22;
-  drawIcon(gr,name,active?COL.green:(hv(cx-rad,cyc-rad,cx+rad,cyc+rad)?COL.text:COL.text2),cx-rad,cyc-rad,rad*2,rad*2,isz);
+  var hot=hv(cx-rad,cyc-rad,cx+rad,cyc+rad);
+  drawIcon(gr,name,active?accentState(hot):(hot?COL.text:COL.text2),cx-rad,cyc-rad,rad*2,rad*2,isz);
   HB_CTRL.push({x0:cx-rad,y0:cyc-rad,x1:cx+rad,y1:cyc+rad,act:act});
 }
 // seek / volume track: filled progress on a dim rail, with a generously padded hitbox
@@ -56,7 +57,7 @@ function drawBar(gr){
   var audioX=volX-78, audioY=gearC-18;
   if(audioX>=cxC+172){
     var ah=36, ahov=hv(audioX,audioY,audioX+36,audioY+ah);
-    drawIcon(gr,'audioSettings',fb.StopAfterCurrent?COL.green:(ahov||audioPopup)?COL.text:COL.text2,audioX,audioY,36,ah,22);
+    drawIcon(gr,'audioSettings',fb.StopAfterCurrent?accentState(ahov):(ahov||audioPopup)?COL.text:COL.text2,audioX,audioY,36,ah,22);
     HB_AUDIO.push({x0:audioX,y0:audioY,x1:audioX+36,y1:audioY+ah});
   }
   drawIcon(gr,'volume',COL.text2,volX-32,gearC-13,26,26,22);

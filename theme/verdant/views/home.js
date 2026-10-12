@@ -33,7 +33,7 @@ function drawHomeViewToggle(gr,r){
   for(var i=0;i<2;i++){
     var mode=i?'list':'grid',bx=x+i*34;
     gr.FillRoundRect(bx,y,30,30,8,8,homeViewMode===mode?COL.rowActive:COL.elev);
-    drawIcon(gr,mode,homeViewMode===mode?COL.green:COL.text2,bx,y,30,30,17);
+    drawIcon(gr,mode,homeViewMode===mode?accentState(hv(bx,y,bx+30,y+30)):COL.text2,bx,y,30,30,17);
     HB_HOME_VIEW.push({x0:bx,y0:y,x1:bx+30,y1:y+30,mode:mode});
   }
 }

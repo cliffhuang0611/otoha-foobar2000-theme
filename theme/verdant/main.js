@@ -37,6 +37,7 @@ var DLGC_WANTALLKEYS=0x0004;   // capture Ctrl+F and text editing from every vie
    Paths are relative to this file: JSplitter resolves include() against the
    including script's own folder. */
 include('core/props.js');
+include('core/palette.js');
 include('core/tokens.js');
 include('core/util.js');
 include('core/tf.js');
