@@ -48,6 +48,8 @@ include('data/library.js');
 include('data/playback.js');
 include('data/audio_options.js');
 include('data/lyrics.js');
+include('data/lyrics_online.js');
+include('data/lyrics_editor.js');
 include('data/replaygain.js');
 include('data/dedupe.js');
 include('data/playlist_edit.js');

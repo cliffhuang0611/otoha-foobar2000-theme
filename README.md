@@ -145,6 +145,28 @@ visualizers, cover mosaics, and ReplayGain remain available.
   Missing or zero dates are omitted from artist, album, and grouped-library metadata.
 - Lyrics support adjacent `.lrc` / `.txt` files and embedded lyrics fields, including synchronized
   highlighting and scrolling; plain lyrics can be scrolled in the queue pane.
+  Partially timestamped lyrics keep all lines in the scrollable text view until timing is complete;
+  saving `.lrc` or metadata preserves both existing timestamps and unfinished lines.
+- When no local lyrics exist, **Search lyrics** manually searches LRCLIB using title and artist,
+  including Japanese text. A dialog lists matches by album, duration, and synchronized/plain format,
+  with a scrollable lyrics preview. Separate **Use lyrics** and **Edit lyrics** buttons apply the
+  selected result or open it in a native multiline editor with Japanese input support.
+  Lyrics context menus use Verdant's custom styling. **Add current timestamp** stamps the cursor's line
+  using that track's playback position, replaces existing timing, and advances to the next line.
+  **F3** performs the same timestamp action while the editor is open.
+  **Delete lyrics from metadata** offers quick removal of embedded lyric fields after confirmation;
+  adjacent `.lrc` and `.txt` files are kept.
+  The editor has playback controls and a seek slider: **F4** pauses/resumes, **F2/F5** seek
+  backward/forward five seconds. Controls target the editor's track; **Play this track** starts it
+  if playback has moved elsewhere. The native editor remains modal to the main foobar window.
+  Right-click the sidebar or fullscreen lyrics area to search or reopen the result dialog.
+  Searches are never automatic. Previews are held in memory until panel reload; **Lyrics options**
+  offers **Edit lyrics** and a separate confirmed save to `SYNCEDLYRICS` or `LYRICS`.
+  The editor can apply a preview, save plain UTF-8 `.txt` or timed `.lrc` beside the audio file,
+  or save embedded lyrics. Existing sidecar files and embedded lyrics require confirmation before
+  replacement. Editor metadata saves normalize lyric fields to plain `LYRICS` and, when timed,
+  `SYNCEDLYRICS`. Sidecars require a local single-track file. Internet access is required;
+  no API key is needed. See [LRCLIB's API documentation](https://lrclib.net/docs).
 - One icon beside volume opens **output-device and saved DSP-preset** selectors, with active choices,
   scrolling flyouts, and explicit switching. Unsupported host APIs are handled with a message.
 - The same menu includes **Scheduler → Stop after current song**, using foobar2000's native setting.

@@ -190,9 +190,11 @@ function drawFsDefault(gr,bot){
   tCE(gr,npArtistStr,FONT.sect2,COL.text2,tx,ty+96,tw,34);
 }
 function drawFsLyrics(gr,bot){
+  HB_LY_ACTION=[];
   fsMiniNP(gr);
   loadLyrics();   // reload for the current track (fast: cached by track; reloads on track change)
-  if(noLyrics()){ tC(gr,'No lyrics found',FONT.sect2,COL.text2,0,Math.round(H*0.45),W,40); return; }
+  if(noLyrics()){ tC(gr,'No lyrics found',FONT.sect2,COL.text2,0,Math.round(H*0.45),W,40);drawLyricActions(gr,Math.round(W/2)-110,bot-44,220);return; }
+  drawLyricActions(gr,Math.round(W/2)-110,bot-44,220);bot-=80;
   if(lyrics.synced) drawRollingLyrics(gr,140,165,W-280,bot,FONT.fsLyric,COL.green,'c');
   else drawStaticLyrics(gr,140,W-280,180,bot,FONT.fsLyric,0.4);
 }
@@ -364,6 +366,7 @@ function drawFsBar(gr){
   HB_VOL=drawTrackBar(gr,volX,volY,volW,4,rail,clamp01(vol2pos(fb.Volume)));
 }
 function drawFullscreen(gr){
+  HB_LY_ACTION=[];
   HB_CTRL=[]; HB_SEEK=null; HB_VOL=null; HB_FS=[]; SB=null; SBH=null; SBN=null;
   gr.FillSolidRect(0,0,W,H,COL.base);
   var bot=H-172;

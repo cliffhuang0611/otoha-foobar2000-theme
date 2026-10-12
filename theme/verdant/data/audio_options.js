@@ -108,7 +108,10 @@ function drawAudioMenu(gr){
   if(x-sw<8 && x+w+sw>W-8) sw=Math.max(190,Math.min(sw,x-8));
   var sx=(x-sw>=8)?x-sw:x+w;
   if(sx+sw>W-8) sx=Math.max(8,W-sw-8);
-  var sy=Math.max(8,Math.min(y,btn.y0-sh));
+  // Anchor to the selected category, not the top of the entire root menu.
+  // Short flyouts may extend below the root; only the window edge limits them.
+  var parentTop=y+pad+sections.indexOf(m.sub)*rh;
+  var sy=Math.max(8,Math.min(parentTop,H-sh-8));
   m.subRect={x0:sx,y0:sy,x1:sx+sw,y1:sy+sh};
   gr.FillSolidRect(sx+3,sy+4,sw,sh,RGBA(0,0,0,140));
   gr.FillRoundRect(sx,sy,sw,sh,8,8,RGB(48,48,48));

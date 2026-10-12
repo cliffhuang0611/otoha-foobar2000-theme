@@ -137,9 +137,18 @@ function paintQueueSelection(gr,row,handle){
   if(s&&s.index===row.upIndex&&queueHandlesEqual(s.handle,handle))
     gr.FillRoundRect(row.x0,row.y0,row.x1-row.x0,row.y1-row.y0,6,6,COL.rowActive);
 }
+var HB_QUEUE_NP=null;
 function openQueueMenu(x,y){
   stopQueueEdgeScroll();queueDrag=null;if(drag==='queue')drag=null;
   clearPlaylistNameTooltip();
+  var row=hit(HB_Q,x,y),handle=row?row.handle:HB_QUEUE_NP&&inRect(x,y,HB_QUEUE_NP)?HB_QUEUE_NP.handle:null;
+  if(handle){
+    if(row)selectQueueRow(row);
+    openSongMenu(handle,x,y,undefined,undefined,[{handle:handle}],true);
+    ctxMenu.items=ctxMenu.items.filter(function(item){return item.act!=='deletefiles';});
+    ctxMenu.items.push({separator:true},{label:'Clear upcoming tracks',act:'clearqueue',disabled:!hasUpcomingPlayback()});
+    repaintAll();return;
+  }
   ctxMenu={kind:'queue',x:x,y:y,items:[{label:'Clear upcoming tracks',act:'clearqueue',disabled:!hasUpcomingPlayback()}]};
   repaintAll();
 }
@@ -252,6 +261,8 @@ function drawQueue(gr){
   drawQueueDragMarker(gr);
 }
 function drawQueueContents(gr){
+  HB_QUEUE_NP=null;
+  HB_LY_ACTION=[];
   HB_TABS=[]; HB_Q=[];
   SBQ=null;HB_QUEUE_CLEAR=null;QUEUE_VIEW=null;
   var r=R.queue; panelBg(gr,r,COL.base);
@@ -269,17 +280,20 @@ function drawQueueContents(gr){
     if(noLyrics()){
       tC(gr,'No lyrics found',FONT.sect,COL.text2,r.x,r.y+Math.round(r.h/2)-28,r.w,24);
       tC(gr,'No embedded lyrics or .lrc/.txt file found.',FONT.qArtist,COL.text3,r.x,r.y+Math.round(r.h/2)+2,r.w,18);
+      drawLyricActions(gr,r.x+18,r.y+r.h-48,r.w-36);
       return;
     }
-    var viewTop=r.y+64+headerExtra, viewBot=r.y+r.h-16, maxW=r.w-28;
+    var viewTop=r.y+64+headerExtra, viewBot=r.y+r.h-84, maxW=r.w-28;
     if(lyrics.synced) drawRollingLyrics(gr,r.x+14,viewTop,maxW,viewBot,FONT.lyric,COL.green,'c');
     else drawStaticLyrics(gr,r.x+14,maxW,viewTop+6,viewBot,FONT.lyric,0.45);
+    drawLyricActions(gr,r.x+18,r.y+r.h-48,r.w-36);
     return;
   }
 
   var qy=r.y+70+headerExtra;
   tL(gr,stoppedPlayback&&!(fb.IsPlaying||fb.IsPaused)?'Stopped':'Now playing',FONT.sect,COL.text,x,qy,r.w-36,24);qy+=36;
   qEntry(gr,r,x,qy,48,6,NP,'np',undefined,npTitleStr||'Nothing playing',npArtistStr,(fb.IsPlaying||fb.IsPaused)?COL.green:COL.text);
+  if(NP)HB_QUEUE_NP={x0:r.x+10,y0:qy-6,x1:r.x+r.w-24,y1:qy+54,handle:NP};
   qy+=70;
 
   var rh=56,footerTop=r.y+r.h-54,bottom=footerTop-8;

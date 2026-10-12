@@ -109,7 +109,7 @@ function readFirst(paths){
 }
 function parseLyrics(text){
   // Embedded USLT/SYLT tags and external LRC text share this parser.
-  var raw=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/),lines=[],synced=false;
+  var raw=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/),lines=[],synced=false,untimed=false;
   var reAll=/\[(\d+):(\d+(?:[.:]\d+)?)\]/g, offset=0,i,j,m;
   for(i=0;i<raw.length;i++){
     var line=raw[i],om=/^\s*\[offset:([+-]?\d+)\]\s*$/i.exec(line);
@@ -122,22 +122,24 @@ function parseLyrics(text){
     var txt=line.replace(reAll,'').trim();
     if(/^\s*\[[a-zA-Z#]+:/.test(txt)) continue;
     if(times.length){ synced=true; for(j=0;j<times.length;j++) lines.push({t:times[j],text:txt}); }
-    else if(txt.length) lines.push({t:-1,text:txt});
+    else if(txt.length){untimed=true;lines.push({t:-1,text:txt});}
   }
-  if(synced){
-    // In timed lyrics, untimed lines cannot be synchronized reliably.
-    lines=lines.filter(function(line){return line.t>=0;});
+  var hasTiming=synced;
+  if(synced&&!untimed){
     lines.sort(function(a,b){ return a.t-b.t; });
   }
-  return {lines:lines,synced:synced};
+  // Partial timing stays in source order and uses the scrollable text view.
+  // Never discard unfinished lines or invent timing for them.
+  return {lines:lines,synced:synced&&!untimed,hasTiming:hasTiming,partial:hasTiming&&untimed};
 }
 /* Direct file-info lookup works with standard LYRICS as well as various
    SYNCEDLYRICS/UNSYNCEDLYRICS spellings written by taggers. */
+var LYRIC_META_FIELDS=['SYNCED LYRICS','SYNCEDLYRICS','SYNCED_LYRICS','LYRICS','UNSYNCED LYRICS','UNSYNCEDLYRICS','UNSYNCED_LYRICS'];
 function embeddedLyrics(handle){
   if(!handle) return null;
   try{
     var info=handle.GetFileInfo(true); if(!info) return null;
-    var fields=['SYNCED LYRICS','SYNCEDLYRICS','SYNCED_LYRICS','LYRICS','UNSYNCED LYRICS','UNSYNCEDLYRICS','UNSYNCED_LYRICS'],i,k,v,found=[];
+    var fields=LYRIC_META_FIELDS,i,k,v,found=[];
     for(i=0;i<fields.length;i++){
       k=info.MetaFind(fields[i]);
       if(k<0) continue;
@@ -161,8 +163,9 @@ function loadLyrics(){
   // Prefer synced embedded data, then synced sidecar .lrc, then plain embedded data,
   // and finally sidecar .txt. External .lrc remains supported exactly as before.
   var taggedParsed=tagged?parseLyrics(tagged):null;
-  if(taggedParsed && taggedParsed.synced && taggedParsed.lines.length) lyrics=taggedParsed;
+  if(taggedParsed && taggedParsed.hasTiming && taggedParsed.lines.length) lyrics=taggedParsed;
   else if(sideLrc){ var parsed=parseLyrics(sideLrc); if(parsed.lines.length) lyrics=parsed; }
   if(lyrics==='none' && taggedParsed && taggedParsed.lines.length) lyrics=taggedParsed;
   if(lyrics==='none'){ sideTxt=readFirst([base+'.txt']); if(sideTxt){ var plain=parseLyrics(sideTxt); if(plain.lines.length) lyrics=plain; } }
+  if(lyrics==='none' && typeof lyOnlineCache!=='undefined' && lyOnlineCache[key])lyrics=parseLyrics(lyOnlineCache[key]);
 }

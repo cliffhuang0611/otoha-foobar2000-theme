@@ -331,7 +331,7 @@ function playlistClipboardPaste(){
 
 /* Song-level actions for library, search, artist, and playlist views.
    The flyout draws beside the main context menu (ui/chrome.js), not in its place. */
-function openSongMenu(handle,x,y,pl,item,entries){
+function openSongMenu(handle,x,y,pl,item,entries,fromQueue){
   clearPlaylistNameTooltip();
   entries=(entries&&entries.length)?entries:[{handle:handle,row:{pl:pl,item:item}}];
   var amount=entries.length;
@@ -342,7 +342,7 @@ function openSongMenu(handle,x,y,pl,item,entries){
                {label:'Show more options',act:'native'},
                {label:'Delete files...',act:'deletefiles',danger:true}];
   var albumHandles=null,artistHandles=null;
-  if(view==='artist'){
+  if(view==='artist'&&!fromQueue){
     for(var b=0;b<artistAlbums.length;b++){
       var tracks=artistAlbums[b].tracks;
       for(var j=0;j<tracks.length;j++)if(queueHandlesEqual(tracks[j].handle,handle)){
@@ -414,6 +414,7 @@ function watchFileOperation(handles){
 }
 function commitDeletePrompt(){
   if(!confirmDel)return;
+  if(confirmDel.kind==='lyricsdelete'){var handle=confirmDel.handle;confirmDel=null;deleteLyricsMetadata(handle);return;}
   if(confirmDel.kind==='queueclear'){confirmDel=null;clearManualQueue();return;}
   if(confirmDel.kind==='clear'){
     var pl=confirmDel.pl;confirmDel=null;
@@ -442,6 +443,7 @@ function songDestinations(menu){
   return entries;
 }
 function handleSongMenuAction(act,menu){
+  if(act==='clearqueue'){ctxMenu=null;promptClearUpNext();return;}
   var i,handles=[],entries=menu.entries||[];
   if(act==='destinations'){ menu.subOpen=true; repaintAll(); return; }
   for(i=0;i<entries.length;i++) handles.push(entries[i].handle);

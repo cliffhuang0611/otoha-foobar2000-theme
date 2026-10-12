@@ -111,12 +111,14 @@ function modalPanel(gr,cw,ch,cy){
   return cx;
 }
 function dlgBtn(gr,x,y,w,h,label,col,hcol,txt){
-  gr.FillRoundRect(x,y,w,h,20,20,hv(x,y,x+w,y+h)?hcol:col);
+  var radius=Math.min(20,w/2,h/2);
+  gr.FillRoundRect(x,y,w,h,radius,radius,hv(x,y,x+w,y+h)?hcol:col);
   tC(gr,label,FONT.pl,txt,x,y,w,h);
   return {x0:x,y0:y,x1:x+w,y1:y+h};
 }
 // themed context menu + modal overlays, painted on top of everything
 function drawOverlays(gr){
+  if(lyDialog){drawLyricDialog(gr);return;}
   CTX_HB=[]; CONF_HB=null; RENAME_HB=null; RG_HB=null;
   if(renameEdit){
     var rw=Math.min(420,W-40), rhh=196, ry0=Math.round((H-rhh)/2), rx0=modalPanel(gr,rw,rhh,ry0);
@@ -216,9 +218,13 @@ function drawOverlays(gr){
   if(confirmDel){
     var cw=380, ch=180, cy=Math.round((H-ch)/2), cx=modalPanel(gr,cw,ch,cy);
     var files=confirmDel.kind==='files';
+    var lyricDelete=confirmDel.kind==='lyricsdelete';
     var queueClear=confirmDel.kind==='queueclear',clear=confirmDel.kind==='clear'||queueClear;
-    tL(gr,queueClear?'Clear upcoming tracks?':files?'Delete music files?':clear?'Clear playlist?':'Delete playlist?',FONT.sect,COL.text,cx+28,cy+24,cw-56,26);
-    if(queueClear){
+    tL(gr,lyricDelete?'Delete embedded lyrics?':queueClear?'Clear upcoming tracks?':files?'Delete music files?':clear?'Clear playlist?':'Delete playlist?',FONT.sect,COL.text,cx+28,cy+24,cw-56,26);
+    if(lyricDelete){
+      tCE(gr,confirmDel.name,FONT.pl,COL.text2,cx+28,cy+58,cw-56,20);
+      tL(gr,'Remove lyric tags only. .lrc/.txt files are kept.',FONT.plSub,COL.text2,cx+28,cy+82,cw-56,20);
+    }else if(queueClear){
       tL(gr,'Clear all upcoming tracks?',FONT.pl,COL.text2,cx+28,cy+58,cw-56,20);
       tL(gr,'Playback stops after the current track.',FONT.plSub,COL.text2,cx+28,cy+82,cw-56,20);
     }else tL(gr,files?'Delete '+confirmDel.handles.length+' selected track(s) from disk?':clear?'Remove all tracks from "'+confirmDel.name+'"? Music files are kept.':'Remove "'+confirmDel.name+'"? Music files are kept.',FONT.pl,COL.text2,cx+28,cy+58,cw-56,40);

@@ -321,13 +321,13 @@ function on_paint(gr){
                 && !dirtyNav && !dirtyQueue && !dirtySearch && !dirtyTitle;
     clearDirty();
     if(vizOnly){ drawVizBand(gr); return; }
-    HB_DOTS=[]; drawFullscreen(gr); return;
+    HB_DOTS=[]; drawFullscreen(gr);if(lyDialog||(ctxMenu&&ctxMenu.kind==='lyrics')||(confirmDel&&confirmDel.kind==='lyricsdelete'))drawOverlays(gr); return;
   }
   var anyPartial=dirtyBar||dirtyQueue||dirtySearch||dirtyMain||dirtyNav||dirtyTitle;
   // A partial paint skips drawOverlays, so a modal's dim backdrop would not be reapplied over the
   // region it redraws (the bar's 1 Hz repaint would flash back to full brightness). While an
   // overlay owns the screen, every paint takes the full path.
-  var modal=renameEdit||ctxMenu||confirmDel||dupPrompt||rgPrompt||audioPopup||plSortMenuOpen||sgMenuOpen||rgTipShown;
+  var modal=lyDialog||renameEdit||ctxMenu||confirmDel||dupPrompt||rgPrompt||audioPopup||plSortMenuOpen||sgMenuOpen||rgTipShown;
   if(dirtyAll || !anyPartial || modal || stale){ // full paint, or an OS/stale paint we can't scope
     clearDirty();
     HB_DOTS=[];
@@ -392,6 +392,7 @@ function mouseSelectionModifiers(mask){
   return {shift:shift,ctrl:ctrl};
 }
 function on_mouse_lbtn_down(x,y,mask){
+  if(lyDialog)return;
   trackClickModifiers=mouseSelectionModifiers(mask);
   if(ctxMenu||confirmDel||renameEdit||sgMenuOpen||plSortMenuOpen||vizMenuOpen||dupPrompt||rgPrompt||audioPopup) return;   // overlays are modal; dismissal/actions handled on button-up
   if(sidebarResizeHit(x,y)){clearPlaylistNameTooltip();drag='sidebar';return;}
@@ -414,11 +415,15 @@ function on_mouse_lbtn_down(x,y,mask){
 }
 function on_mouse_rbtn_up(x,y){
   rgTipClear();
+  if(lyDialog)return true;
   if(ctxMenu){
     if(!hit(CTX_HB,x,y))dismissTransientMenus();
     return true;
   }
   if(ctxMenu||confirmDel||renameEdit||dupPrompt||rgPrompt||audioPopup) return true;   // a modal is open: swallow
+  if((fsMode&&fsView==='lyrics'&&y<H-172)||(!fsMode&&queueVisible()&&rightTab==='lyrics'&&inRect(x,y,{x0:R.queue.x,y0:R.queue.y+50,x1:R.queue.x+R.queue.w,y1:R.queue.y+R.queue.h}))){
+    lyricPanelMenu(x,y);return true;
+  }
   if(!fsMode&&queueVisible()&&rightTab==='queue'&&inRect(x,y,{x0:R.queue.x,y0:R.queue.y,x1:R.queue.x+R.queue.w,y1:R.queue.y+R.queue.h})){
     openQueueMenu(x,y);return true;
   }
@@ -569,6 +574,8 @@ function doCtrl(act){
   repaintAll();
 }
 function on_mouse_lbtn_up(x,y,mask){
+  if(lyDialogDoubleClickUp){lyDialogDoubleClickUp=false;trackClickModifiers=null;return;}
+  if(lyDialog){lyricDialogClick(x,y);return;}
   var clickModifiers=trackClickModifiers||mouseSelectionModifiers(mask);
   trackClickModifiers=null;
   if(queueDrag){updateQueueDrag(x,y);finishQueueDrag();return;}
@@ -599,6 +606,7 @@ function on_mouse_lbtn_up(x,y,mask){
     if(t){
       var act=t.act, pl=ctxMenu.pl, nm=ctxMenu.name, itm=ctxMenu.item;
       if(t.disabled)return;
+      if(ctxMenu.kind==='lyrics'){handleLyricsMenuAction(act,ctxMenu);return;}
       if(ctxMenu.kind==='queue'){ctxMenu=null;if(act==='clearqueue')promptClearUpNext();return;}
       if(ctxMenu.kind==='pl'){handlePlaylistMenuAction(act,ctxMenu);return;}
       if(ctxMenu.kind==='song'){
@@ -661,6 +669,7 @@ function on_mouse_lbtn_up(x,y,mask){
   }
   if(HB_PLSORT && inRect(x,y,HB_PLSORT)){ plSortMenuOpen=true; repaintAll(); return; }
   if(HB_PLSORTDIR && inRect(x,y,HB_PLSORTDIR)){ togglePlSortDir(); return; }
+  if(((fsMode&&fsView==='lyrics')||(!fsMode&&queueVisible()&&rightTab==='lyrics'))&&lyricActionClick(x,y))return;
   if(fsMode){
     if(vizMenuOpen){                                  // the style list is modal while it is open
       if((t=hit(VIZ_HB,x,y))){ setVizStyle(t.v); return; }
@@ -738,6 +747,7 @@ function playRow(t){
 // A single click on a list this dense is too easy to fire by accident, and it is the convention
 // every desktop player follows -- including the one this theme is modelled on.
 function on_mouse_lbtn_dblclk(x,y,mask){
+  if(lyDialog){lyricDialogDoubleClick(x,y);return;}
   var modifiers=mouseSelectionModifiers(mask);
   if(modifiers.shift||modifiers.ctrl)return;
 
@@ -814,6 +824,7 @@ function hoverSig(x,y){
 }
 function on_mouse_move(x,y){
   mx=x; my=y;
+  if(lyDialog){clearPlaylistNameTooltip();repaintAll();return;}
   if(drag==='scrollq'){setQueueScroll(y);return;}
   if(queueDrag){updateQueueDrag(x,y);return;}
   if(drag==='sidebar'){
@@ -876,6 +887,7 @@ function on_mouse_leave(){
   hoverZoneKey='';
 }
 function on_char(code){
+  if(lyDialog)return;
   // A Ctrl+N/Ctrl+A key can emit WM_CHAR after its WM_KEYDOWN on some hosts.
   // Never insert a stray character into either custom-drawn text editor.
   var ctrl=false,alt=false;
@@ -1234,6 +1246,12 @@ function on_key_down(vkey){
   }
   // Ctrl+R is reserved for the user's foobar2000 rescan shortcut.
   if(ctrl && !alt && !shift && vkey===82)return;
+  if(lyDialog){
+    if(vkey===27)closeLyricDialog();
+    else if(vkey===13&&!ctrl&&!alt)applyLyricDialog();
+    else if(vkey===38||vkey===40)selectLyricResult(lyDialog.selected+(vkey===38?-1:1));
+    return;
+  }
   if(audioPopup){ if(vkey===27)audioClose();return; }
   if(renameEdit){renameKeyDown(vkey,ctrl,shift,alt);return;}
   if(confirmDel){
@@ -1339,6 +1357,7 @@ function on_main_menu_dynamic(commandId){
   }
 }
 function on_mouse_wheel(step){
+  if(lyDialog){lyricDialogWheel(step);return;}
   if(confirmDel||renameEdit||dupPrompt||rgPrompt)return;
   if(audioPopup){audioListWheel(step);return;}
   if(ctxMenu){
@@ -1391,6 +1410,7 @@ function plDropTarget(x,y){
   return i;
 }
 function dragUpdate(action,x,y){
+  if(lyDialog){action.Effect=0;setDropHover(false,false);return;}
   var ext=!action.IsInternal;                        // ignore drags started inside the skin
   var onLib=ext && overLib(x,y), onPl=!onLib && ext && plDropTarget(x,y)>=0;
   if(onLib||onPl) action.Effect=(action.Effect&1)?1:((action.Effect&4)?4:0);  // prefer copy, else link
@@ -1406,6 +1426,7 @@ function on_drag_enter(action,x,y,mask){ dragUpdate(action,x,y); }
 function on_drag_over(action,x,y,mask){ dragUpdate(action,x,y); }
 function on_drag_leave(){ setDropHover(false,false); }
 function on_drag_drop(action,x,y,mask){
+  if(lyDialog){action.Effect=0;return;}
   var ext=!action.IsInternal, hit=ext&&(action.Effect&5), pi=hit?plDropTarget(x,y):-1;   // 5 = copy|link
   if(hit && overLib(x,y)){
     var np=createNewPlaylist();
@@ -1421,6 +1442,7 @@ function on_drag_drop(action,x,y,mask){
   navDropHover=false; plDropHover=false; repaintAll();
 }
 function on_script_unload(){
+  stopLyricRequest();
   stopPlayOrderSync();
   stopQueueEdgeScroll();
   clearPlaylistNameTooltip();
