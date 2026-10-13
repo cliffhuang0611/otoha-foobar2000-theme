@@ -81,6 +81,10 @@ visualizers, cover mosaics, and ReplayGain remain available.
   repeat one keeps the current occurrence highlighted rather than adding another copy.
   Deliberately queued duplicate tracks remain separate entries.
 - Right-click a Play order row or press **Delete** with the queue focused to remove that occurrence.
+  **Ctrl-click** toggles individual occurrences; **Shift-click** selects a range, and **Ctrl+Shift-click**
+  adds a range to the selection. Dragging moves the selection as one block in its original order.
+  Delete and the track context menu remove selected occurrences together while keeping the playing
+  or paused occurrence. Playlist drops and track context actions also use the complete selection.
   The playing/paused occurrence is protected; source playlists and files are kept. Drag main-view
   track rows into the queue to copy them at the insertion marker, or into blank space below the list
   to append. Selected tracks retain their source order, and the queue scrolls near its edges.
@@ -91,7 +95,7 @@ visualizers, cover mosaics, and ReplayGain remain available.
   Dragging tracks onto a sidebar playlist or Home playlist card appends copies to that playlist.
   Dropping onto **New playlist** creates and opens a playlist containing the dragged tracks.
   These targets also accept a track dragged from Play order; locked/automatic playlists reject drops.
-  With the queue focused, **Ctrl+V** pastes tracks after the selected occurrence, or at the end when
+  With the queue focused, **Ctrl+V** pastes tracks after the last selected occurrence, or at the end when
   no row is selected. These edits are included in the retained playback order.
 - Stop retains the full Play order and highlights the track ready to play, including when using
   foobar2000's native Stop command. The retained order and exact current occurrence survive closing

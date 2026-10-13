@@ -426,7 +426,7 @@ function on_mouse_lbtn_down(x,y,mask){
   if(HB_VOL && inRect(x,y,HB_VOL)){ drag='vol'; applyVol(x); return; }
   if(rightTab==='queue'&&queueVisible()&&SBQ&&inRect(x,y,SBQ)){drag='scrollq';setQueueScroll(y);return;}
   var queueRow=!fsMode&&queueVisible()&&rightTab==='queue'&&x>=R.queue.x&&x<R.queue.x+R.queue.w&&hit(HB_Q,x,y);
-  if(queueRow){beginQueueDrag(queueRow,x,y);return;}
+  if(queueRow){beginQueueDrag(queueRow,x,y,trackClickModifiers);return;}
   if(queueKeyboardFocus)return;
   if(W<1180 && compactQueueOpen && R.queueW && x>=R.queue.x && y>=R.queue.y && y<R.queue.y+R.queue.h) return;
   if(SBH && inRect(x,y,SBH)){ drag='scrollh'; setScrollH(x); return; }
@@ -1299,7 +1299,7 @@ function on_key_down(vkey){
   if(dupPrompt || rgPrompt || fsMode)return;
   if(ctrl&&!alt&&!shift&&vkey===36){keyboardAction('goHome');return;}
   if(queueKeyboardFocus&&queueVisible()&&rightTab==='queue'){
-    if(vkey===46){if(!ctrl&&!alt&&queueSelection)removeQueueOccurrence(queueSelection.index,queueSelection.handle);return;}
+    if(vkey===46){if(!ctrl&&!alt&&queueSelection)removeQueueSelection();return;}
     if(ctrl&&!alt&&!shift&&vkey===86){pasteQueueTracks();return;}
   }
   if(ctrl && !alt && !shift && vkey===78){keyboardAction('newPlaylist');return;} // Ctrl+N
@@ -1564,7 +1564,7 @@ function on_playback_time(){
 }
 function on_playback_seek(){ repaintAll(); }
 function on_playback_order_changed(){syncOrderFromFb();queueViewportCache=null;repaintAll();}
-function on_playback_queue_changed(){normalizeQueueHandoff();schedulePlayOrderSync();queueViewportCache=null;queueSelection=null;if(!upNextMutation)persistQueueState();repaintAll();}
+function on_playback_queue_changed(){normalizeQueueHandoff();schedulePlayOrderSync();queueViewportCache=null;if(!upNextMutation){if(!queueSelectionMatchesOrder(playOrderEntries()))queueSelection=null;persistQueueState();}repaintAll();}
 function on_volume_change(){ repaintBar(); }
 function on_output_device_changed(){audioChanged('output');}
 function on_dsp_preset_changed(){audioChanged('dsp');}

@@ -131,10 +131,19 @@ function upNextEqual(a,b){
   for(var i=0;i<a.length;i++)if(a[i].q!==b[i].q||a[i].pl!==b[i].pl||a[i].item!==b[i].item||!queueHandlesEqual(a[i].handle,b[i].handle))return false;
   return true;
 }
-function selectQueueRow(row){queueKeyboardFocus=true;queueSelection={index:row.upIndex,handle:row.handle};repaintQueue();}
+function selectQueueRow(row,mods){
+  queueKeyboardFocus=true;mods=mods||{};var entries=playOrderEntries(),index=row.upIndex;
+  if(!entries[index]||!queueHandlesEqual(entries[index].handle,row.handle))return;
+  var selected=queueSelectedEntries(entries).map(function(e){return e.index;}),anchor=queueSelection&&queueSelection.anchor!==undefined?queueSelection.anchor:index;
+  if(mods.shift){
+    if(!mods.ctrl)selected=[];
+    for(var i=Math.min(anchor,index);i<=Math.max(anchor,index);i++)if(selected.indexOf(i)<0)selected.push(i);
+  }else if(mods.ctrl){var at=selected.indexOf(index);if(at<0)selected.push(index);else selected.splice(at,1);anchor=index;}
+  else{selected=[index];anchor=index;}
+  setQueueSelection(selected,entries,index,anchor);repaintQueue();
+}
 function paintQueueSelection(gr,row,handle){
-  var s=queueSelection;
-  if(s&&s.index===row.upIndex&&queueHandlesEqual(s.handle,handle))
+  if(queueRowSelected(row.upIndex,handle))
     gr.FillRoundRect(row.x0,row.y0,row.x1-row.x0,row.y1-row.y0,6,6,COL.rowActive);
 }
 var HB_QUEUE_NP=null;
@@ -144,12 +153,14 @@ function openQueueMenu(x,y){
   clearPlaylistNameTooltip();
   var row=hit(HB_Q,x,y),handle=row?row.handle:HB_QUEUE_NP&&inRect(x,y,HB_QUEUE_NP)?HB_QUEUE_NP.handle:null;
   if(handle){
-    if(row)selectQueueRow(row);
-    openSongMenu(handle,x,y,undefined,undefined,[{handle:handle}],true);
-    ctxMenu.items=ctxMenu.items.filter(function(item){return item.act!=='deletefiles';});
     var entries=playOrderEntries(),index=row?row.upIndex:queueCurrentIndex(entries);
-    ctxMenu.queueIndex=index;ctxMenu.queueEntries=entries;
-    ctxMenu.items.push({separator:true},{label:'Remove from Play order',act:'queueremove',disabled:index<0||!entries[index]||!!((fb.IsPlaying||fb.IsPaused)&&entries[index].current)});
+    if(index>=0&&(!row||!queueRowSelected(index,handle)))selectQueueRow({upIndex:index,handle:handle});
+    var selected=queueSelectedEntries(entries);
+    openSongMenu(handle,x,y,undefined,undefined,selected,true);
+    ctxMenu.items=ctxMenu.items.filter(function(item){return item.act!=='deletefiles';});
+    ctxMenu.queueIndex=index;ctxMenu.queueEntries=entries;ctxMenu.queueSelected=selected;
+    var removable=selected.some(function(s){return !((fb.IsPlaying||fb.IsPaused)&&entries[s.index].current);});
+    ctxMenu.items.push({separator:true},{label:selected.length>1?'Remove selected tracks from Play order':'Remove from Play order',act:'queueremove',disabled:!removable});
     ctxMenu.items.push({separator:true},{label:'Clear upcoming tracks',act:'clearqueue',disabled:!hasUpcomingPlayback()});
     repaintAll();return;
   }
@@ -190,20 +201,22 @@ function playUpNextRow(row){
   if(!entries[row.upIndex]||!queueHandlesEqual(entries[row.upIndex].handle,row.handle))return;
   installPlayOrder(entries,-1,row.upIndex);queueSelection=null;repaintAll();
 }
-function beginQueueDrag(row,x,y){
+function beginQueueDrag(row,x,y,mods){
   stopQueueEdgeScroll();
+  mods=mods||{};
+  if(mods.ctrl||mods.shift||!queueRowSelected(row.upIndex,row.handle))selectQueueRow(row,mods);
+  var selected=queueSelectedEntries();
   var loc=playingLoc();
-  queueDrag={row:row,x:x,y:y,moved:false,target:null,entries:playOrderEntries(),
+  queueDrag={row:row,x:x,y:y,moved:false,target:null,modified:!!(mods.ctrl||mods.shift),indices:selected.map(function(e){return e.index;}),handles:selected.map(function(e){return e.handle;}),entries:playOrderEntries(),
     loc:loc&&loc.IsValid?{pl:loc.PlaylistIndex,item:loc.PlaylistItemIndex}:null};
 }
 function updateQueueDrag(x,y){
   if(!queueDrag)return;
+  if(queueDrag.modified)return;
   if(!queueDrag.moved&&Math.abs(x-queueDrag.x)+Math.abs(y-queueDrag.y)<6)return;
   queueDrag.moved=true;drag='queue';queueDrag.target=null;
   trackQueueEdgeScroll(x,y);
-  for(var i=0;i<HB_Q.length;i++)if(inRect(x,y,HB_Q[i])){
-    var row=HB_Q[i];queueDrag.target={row:row,after:y>=(row.y0+row.y1)/2};break;
-  }
+  queueDrag.target=queueDragTargetAt(x,y);
   repaintQueue();
 }
 function finishQueueDrag(){
@@ -215,19 +228,23 @@ function finishQueueDrag(){
 function applyQueueDrag(){
   var d=queueDrag;queueDrag=null;drag=null;
   if(!d)return;
-  if(!d.moved){selectQueueRow(d.row);return;}
+  if(!d.moved){if(!d.modified)selectQueueRow(d.row);return;}
   var playlistTarget=trackPlaylistDropTarget(queuePointer.x,queuePointer.y);
-  if(playlistTarget){appendDraggedTracks(playlistTarget,[d.row.handle]);return;}
+  if(playlistTarget){appendDraggedTracks(playlistTarget,d.handles||[d.row.handle]);return;}
   if(!d.target){repaintQueue();return;}
   var entries=playOrderEntries(),loc=playingLoc();
   if(!upNextEqual(d.entries,entries)||!!d.loc!==!!(loc&&loc.IsValid)||(d.loc&&(loc.PlaylistIndex!==d.loc.pl||loc.PlaylistItemIndex!==d.loc.item))){repaintQueue();return;}
-  var from=d.row.upIndex,to=d.target.row.upIndex+(d.target.after?1:0);
-  if(to>from)to--;
-  if(to===from){repaintQueue();return;}
-  var entry=entries.splice(from,1)[0];entries.splice(to,0,entry);
+  var indices=d.indices||[d.row.upIndex],boundary=d.target.row.upIndex+(d.target.after?1:0),picked=[],kept=[],to=boundary;
+  for(var j=0;j<entries.length;j++){
+    if(indices.indexOf(j)>=0){picked.push(entries[j]);if(j<boundary)to--;}
+    else kept.push(entries[j]);
+  }
+  entries=kept.slice(0,to).concat(picked,kept.slice(to));
   var currentIndex=-1;for(var i=0;i<entries.length;i++)if(entries[i].current){currentIndex=i;break;}
-  installPlayOrder(entries,currentIndex);if(entry.current)queueRevealPending=true;
-  queueSelection={index:to,handle:entry.handle};repaintAll();
+  if(!upNextEqual(d.entries,entries))installPlayOrder(entries,currentIndex);
+  if(picked.some(function(e){return e.current;}))queueRevealPending=true;
+  var moved=[];for(var k=0;k<picked.length;k++)moved.push(to+k);
+  setQueueSelection(moved,entries,to);repaintAll();
 }
 function drawQueueDragMarker(gr){
   if(!queueDrag||!queueDrag.moved||!queueDrag.target)return;
@@ -260,10 +277,7 @@ function qEntry(gr,r,x,y,cs,dy,h,seed,key,title,artist,tcol){
 function drawQueue(gr){
   drawQueueContents(gr);
   if(queueDrag&&queueDrag.moved){
-    queueDrag.target=null;
-    for(var i=0;i<HB_Q.length;i++)if(inRect(queuePointer.x,queuePointer.y,HB_Q[i])){
-      var row=HB_Q[i];queueDrag.target={row:row,after:queuePointer.y>=(row.y0+row.y1)/2};break;
-    }
+    queueDrag.target=queueDragTargetAt(queuePointer.x,queuePointer.y);
   }
   drawQueueDragMarker(gr);
   drawQueueInsertionMarker(gr);
@@ -330,7 +344,7 @@ function drawQueueContents(gr){
     var y=top+i*rh-queueScroll;if(y>=bottom)break;
     var e=entries[i],vy0=Math.max(top,y),vy1=Math.min(bottom,y+rh);
     var row={x0:r.x+10,y0:vy0,x1:r.x+r.w-24,y1:vy1,upIndex:i,handle:e.handle};
-    var meta=qRowMeta(e.handle),selected=queueSelection&&queueSelection.index===i&&queueHandlesEqual(queueSelection.handle,e.handle);
+    var meta=qRowMeta(e.handle),selected=queueRowSelected(i,e.handle);
     var hovered=hv(row.x0,vy0,row.x1,vy1),rowW=r.w-34,isCurrent=!!e.current;
     function paint(g,bx,by){
       if(isCurrent||selected||hovered)g.FillRoundRect(bx,by,rowW,rh-4,6,6,isCurrent||selected?COL.rowActive:COL.rowHover);

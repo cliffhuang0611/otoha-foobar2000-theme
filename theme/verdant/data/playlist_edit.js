@@ -465,7 +465,7 @@ function songDestinations(menu){
   return entries;
 }
 function handleSongMenuAction(act,menu){
-  if(act==='queueremove'){ctxMenu=null;if(upNextEqual(menu.queueEntries,playOrderEntries()))removeQueueOccurrence(menu.queueIndex,menu.handle);repaintAll();return;}
+  if(act==='queueremove'){ctxMenu=null;if(upNextEqual(menu.queueEntries,playOrderEntries()))removeQueueOccurrences(menu.queueSelected||[{index:menu.queueIndex,handle:menu.handle}]);repaintAll();return;}
   if(act==='clearqueue'){ctxMenu=null;promptClearUpNext();return;}
   var i,handles=[],entries=menu.entries||[];
   if(act==='destinations'){ menu.subOpen=true; repaintAll(); return; }

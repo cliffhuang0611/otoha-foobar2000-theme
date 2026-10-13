@@ -2,6 +2,45 @@
 var queueKeyboardFocus=false,mainQueueDrag=null,queueInsertMarker=null;
 function queuePaneHit(x,y){return !fsMode&&queueVisible()&&rightTab==='queue'&&inRect(x,y,{x0:R.queue.x,y0:R.queue.y+50,x1:R.queue.x+R.queue.w,y1:R.queue.y+R.queue.h});}
 function queueCurrentIndex(entries){for(var i=0;i<entries.length;i++)if(entries[i].current)return i;return -1;}
+function queueSelectedEntries(entries){
+  entries=entries||playOrderEntries();var s=queueSelection,out=[];if(!s)return out;
+  var selected=s.selected||{};
+  if(!s.selected)selected[s.index]=s.handle;
+  for(var i=0;i<entries.length;i++)if(selected[i]&&queueHandlesEqual(selected[i],entries[i].handle))out.push({index:i,handle:entries[i].handle});
+  return out;
+}
+function queueRowSelected(index,handle){
+  if(!queueSelection)return false;
+  var h=queueSelection.selected?queueSelection.selected[index]:queueSelection.index===index?queueSelection.handle:null;
+  return !!h&&queueHandlesEqual(h,handle);
+}
+function queueSelectionMatchesOrder(entries){
+  if(!queueSelection)return false;
+  var order=queueSelection.order;if(!order)return queueSelectedEntries(entries).length>0;
+  if(order.length!==entries.length)return false;
+  for(var i=0;i<order.length;i++)if(!queueHandlesEqual(order[i],entries[i].handle))return false;
+  return true;
+}
+function setQueueSelection(indices,entries,lead,anchor){
+  var selected={};for(var i=0;i<indices.length;i++)if(entries[indices[i]])selected[indices[i]]=entries[indices[i]].handle;
+  if(!Object.keys(selected).length){queueSelection=null;return;}
+  if(!selected[lead])lead=Number(Object.keys(selected)[0]);
+  queueSelection={index:lead,handle:entries[lead].handle,anchor:anchor===undefined?lead:anchor,selected:selected,order:entries.map(function(e){return e.handle;})};
+}
+function removeQueueSelection(){removeQueueOccurrences(queueSelectedEntries());}
+function removeQueueOccurrences(selected){
+  var entries=playOrderEntries(),current=queueCurrentIndex(entries),remove={},first=entries.length;
+  for(var i=0;i<selected.length;i++){
+    var s=selected[i],e=entries[s.index];
+    if(e&&queueHandlesEqual(e.handle,s.handle)&&!((fb.IsPlaying||fb.IsPaused)&&e.current)){remove[s.index]=true;first=Math.min(first,s.index);}
+  }
+  if(first===entries.length)return;
+  var kept=[],nextCurrent=-1;
+  for(var j=0;j<entries.length;j++)if(!remove[j]){if(j===current)nextCurrent=kept.length;kept.push(entries[j]);}
+  if(nextCurrent<0&&kept.length)nextCurrent=Math.min(first,kept.length-1);
+  commitQueueEdit(kept,nextCurrent);
+  var next=Math.min(first,kept.length-1);setQueueSelection(next>=0?[next]:[],kept,next);repaintAll();
+}
 function commitQueueEdit(entries,index){
   if(!entries.length){
     upNextMutation++;try{clearStoppedPlayback();clearShuffleHandoff();plman.FlushPlaybackQueue();restoreUpNextStop();}
@@ -11,13 +50,7 @@ function commitQueueEdit(entries,index){
   installPlayOrder(entries,index);queueViewportCache=null;updateNP();repaintAll();
 }
 function removeQueueOccurrence(index,handle){
-  var entries=playOrderEntries(),entry=entries[index];
-  if(!entry||!queueHandlesEqual(entry.handle,handle)||((fb.IsPlaying||fb.IsPaused)&&entry.current))return;
-  var current=queueCurrentIndex(entries);entries.splice(index,1);
-  if(index<current)current--;else if(index===current)current=Math.min(index,entries.length-1);
-  commitQueueEdit(entries,current);
-  queueSelection=entries.length?{index:Math.min(index,entries.length-1),handle:entries[Math.min(index,entries.length-1)].handle}:null;
-  repaintAll();
+  removeQueueOccurrences([{index:index,handle:handle}]);
 }
 function insertQueueTracks(handles,index){
   if(!handles.length)return;
@@ -26,7 +59,8 @@ function insertQueueTracks(handles,index){
   var added=handles.map(function(h){return {handle:h,current:false};});
   entries=entries.slice(0,index).concat(added,entries.slice(index));
   if(current>=index)current+=handles.length;
-  commitQueueEdit(entries,current);queueSelection={index:index,handle:handles[0]};queueKeyboardFocus=true;repaintAll();
+  commitQueueEdit(entries,current);var selected=[];for(var i=0;i<handles.length;i++)selected.push(index+i);
+  setQueueSelection(selected,entries,index);queueKeyboardFocus=true;repaintAll();
 }
 function pasteQueueTracks(){
   try{
@@ -34,7 +68,7 @@ function pasteQueueTracks(){
     var list=fb.GetClipboardContents(),handles=[];if(!list)return;
     for(var i=0;i<list.Count;i++)handles.push(list[i]);
     var entries=playOrderEntries(),s=queueSelection,index=entries.length;
-    if(s&&entries[s.index]&&queueHandlesEqual(entries[s.index].handle,s.handle))index=s.index+1;
+    var selected=queueSelectedEntries(entries);if(selected.length)index=selected[selected.length-1].index+1;
     insertQueueTracks(handles,index);
   }catch(e){fb.ShowPopupMessage('Could not paste into Play order: '+String(e),'Verdant');}
 }
@@ -42,6 +76,12 @@ function queueInsertionAt(x,y){
   if(!queuePaneHit(x,y)||!QUEUE_VIEW||x>=R.queue.x+R.queue.w-24||y<QUEUE_VIEW.y0||y>R.queue.y+R.queue.h-54)return null;
   var entries=playOrderEntries(),index=Math.max(0,Math.min(entries.length,Math.floor((y-QUEUE_VIEW.y0+queueScroll+28)/56)));
   return {index:index,y:Math.max(QUEUE_VIEW.y0,Math.min(QUEUE_VIEW.y1,QUEUE_VIEW.y0+index*56-queueScroll))};
+}
+function queueDragTargetAt(x,y){
+  var row=hit(HB_Q,x,y);
+  if(row)return {row:row,after:y>=(row.y0+row.y1)/2};
+  var target=queueInsertionAt(x,y);if(!target)return null;
+  return {row:{upIndex:target.index,x0:R.queue.x+10,x1:R.queue.x+R.queue.w-24,y0:target.y,y1:target.y},after:false};
 }
 function beginMainQueueDrag(row,x,y,mask){
   var mods=mouseSelectionModifiers(mask),h=trackHandle(row);if(!h||mods.ctrl||mods.shift)return;
@@ -98,7 +138,7 @@ function drawQueueInsertionMarker(gr){
 function drawQueueDragPreview(gr){
   var adding=mainQueueDrag&&mainQueueDrag.moved,d=adding?mainQueueDrag:queueDrag&&queueDrag.moved?queueDrag:null;
   if(!d||mx<0||my<0)return;
-  var handles=adding?d.handles:[d.row.handle],h=handles[0];if(!h)return;
+  var handles=adding?d.handles:d.handles||[d.row.handle],h=handles[0];if(!h)return;
   var multi=handles.length>1,shown=Math.min(3,handles.length),more=handles.length-shown;
   var meta=qRowMeta(h),w=Math.min(multi?340:300,W-24),height=multi?64+shown*20+(more?20:0):82;
   var cursorGap=3,x=mx+cursorGap,y=my+cursorGap;
@@ -123,6 +163,6 @@ function drawQueueDragPreview(gr){
   }
   var target=trackPlaylistDropTarget(mx,my),label;
   if(target)label=target.disabled?'Playlist is read-only':target.create?'Create playlist with '+handles.length+' track'+(handles.length===1?'':'s'):'Append to '+plman.GetPlaylistName(target.pl);
-  else label=adding?'Add '+handles.length+' track'+(handles.length===1?'':'s')+' to Play order':'Move in Play order';
+  else label=adding?'Add '+handles.length+' track'+(handles.length===1?'':'s')+' to Play order':handles.length>1?'Move '+handles.length+' tracks in Play order':'Move in Play order';
   tL(gr,label,FONT.plSub,target&&target.disabled?COL.text3:COL.accent,multi?x+12:tx,y+height-28,multi?w-24:tw,18);
 }
