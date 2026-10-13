@@ -202,7 +202,12 @@ function filterEdited(){
   songsScroll=songsScrollT=firstRow=firstRowT=0;
 }
 var rightTab='queue';
-var compactQueueOpen=false, HB_QUEUE_TOGGLE=null;
+var compactQueueOpen=!!(fb.IsPlaying||fb.IsPaused),compactQueueManual=false,HB_QUEUE_TOGGLE=null;
+function syncCompactQueueVisibility(){
+  if(compactQueueManual)return;
+  var open=!!(fb.IsPlaying||fb.IsPaused);if(open===compactQueueOpen)return;
+  compactQueueOpen=open;if(W<1180){layout();repaintAll();}
+}
 function queueVisible(){ return R.queueW>0; }
 function drawQueueToggle(gr){
   HB_QUEUE_TOGGLE=null;
@@ -718,7 +723,7 @@ function on_mouse_lbtn_up(x,y,mask){
   if(rightTab==='queue'&&queueVisible()&&HB_QUEUE_CLEAR&&inRect(x,y,HB_QUEUE_CLEAR)){
     if(!HB_QUEUE_CLEAR.disabled)promptClearUpNext();return;
   }
-  if(HB_QUEUE_TOGGLE && inRect(x,y,HB_QUEUE_TOGGLE)){ compactQueueOpen=!compactQueueOpen; layout(); repaintAll(); return; }
+  if(HB_QUEUE_TOGGLE && inRect(x,y,HB_QUEUE_TOGGLE)){compactQueueManual=true;compactQueueOpen=!compactQueueOpen;layout();repaintAll();return;}
   if(view==='home' && (t=hit(HB_HOME_VIEW,x,y))){setHomeViewMode(t.mode);return;}
   if(W<1180 && compactQueueOpen && R.queueW && x>=R.queue.x && y>=R.queue.y && y<R.queue.y+R.queue.h){
     if((t=hit(HB_TABS,x,y))){ rightTab=t.tab; if(rightTab==='lyrics'){loadLyrics();lySnap=true;} else stopLyAnim(); repaintAll(); return; }
@@ -1524,6 +1529,7 @@ function on_library_items_changed(){ libChanged(); }
 
 /* ------------------------- playback callbacks ------------------------- */
 function on_playback_new_track(){
+  syncCompactQueueVisibility();
   playOrderPreview=null;queueRevealPending=true;
   if(stoppedPlayback)clearStoppedPlayback();
   restoreUpNextStop();
@@ -1555,8 +1561,9 @@ function on_playback_stop(reason){
     persistQueueState();
   }
   npChanged();
+  if(reason!==2)syncCompactQueueVisibility();
 }
-function on_playback_pause(){ npChanged(); }
+function on_playback_pause(){syncCompactQueueVisibility();npChanged();}
 function on_playback_time(){
   repaintBar();
   var lyricsShown=(rightTab==='lyrics')||(fsMode&&fsView==='lyrics');

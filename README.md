@@ -51,8 +51,10 @@ visualizers, cover mosaics, and ReplayGain remain available.
   clamped to the new layout's maximum. The playlist shelf keeps its horizontal position too.
 - **Resizable playlist sidebar**: drag its right-hand gap. The saved width is limited to leave room
   for the main content. Truncated playlist names show full-name hover tooltips in the sidebar and Home.
-- **Compact queue controls**: narrow windows can expand/collapse the queue. The expanded queue
-  occupies its own layout space so it cannot cover main scrollbars. Expand is near the main panel's
+- **Compact queue controls**: narrow windows can expand/collapse the queue. It defaults to open
+  while playing or paused and closed while stopped. A manual toggle overrides automatic visibility
+  until JSplitter reloads, including across subsequent track changes. The expanded queue occupies
+  its own layout space so it cannot cover main scrollbars. Expand is near the main panel's
   right edge; Collapse is inside the queue, below the tabs when space is especially tight.
 - Responsive headings, search/filter fields, sorting/grouping controls, and menus accommodate
   smaller windows. Custom flyouts paint above other content; track menus close on outside clicks,
