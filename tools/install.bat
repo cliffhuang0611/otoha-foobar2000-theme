@@ -1,5 +1,5 @@
 @echo off
-REM Verdant installer launcher.
+REM Otoha installer launcher.
 REM
 REM This exists because a .ps1 downloaded from the internet carries Mark-of-the-Web and
 REM will silently refuse to run on double-click under the default execution policy.

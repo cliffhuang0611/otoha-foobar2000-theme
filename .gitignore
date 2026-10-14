@@ -17,7 +17,7 @@ dist/
 # configuration harvested from a clean-room install; a live profile would carry
 # the media library, playlists, scrobbler credentials and absolute paths.
 profile/
-verdant-backup/
+otoha-backup/
 config.sqlite
 metadb.sqlite
 !dist-config/config.sqlite

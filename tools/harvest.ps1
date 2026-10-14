@@ -4,7 +4,7 @@
     The dev profile cannot produce these: it started life as a Georgia-ReBORN drop-in, so its
     Columns UI config carries another theme's presets, cached lyrics and absolute D:\ paths.
     The rig at D:\sandbox\fb2k-vanilla is a throwaway portable foobar whose profile contains
-    nothing but the three components and Verdant.
+    nothing but the two components and Otoha.
 
     Run this with the rig's foobar CLOSED -- foobar only flushes its configuration on exit,
     so harvesting a running instance captures stale files.
@@ -33,14 +33,9 @@ if (Get-Process -Name 'foobar2000' -ErrorAction SilentlyContinue) {
 
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
 
-# foo_ui_wizard.dll.cfg is deliberately NOT harvested. The theme sets FrameStyle/MoveStyle
-# itself at runtime (app.js, in layout()), so the file buys nothing -- and UI Wizard stores the
-# window geometry in it, which means harvesting it would ship the rig machine's screen size to
-# everyone. That is exactly the kind of leak the audit below now looks for.
 $wanted = @(
-    @{ From = 'configuration\foo_ui_columns.dll.cfg';   Why = 'the layout: one full-window JSplitter panel bound to verdant\main.js' }
+    @{ From = 'configuration\foo_ui_columns.dll.cfg';   Why = 'the layout: one full-window JSplitter panel bound to otoha\main.js' }
     @{ From = 'configuration\foo_uie_jsplitter.dll.cfg';Why = 'JSplitter component settings' }
-    @{ From = 'config.sqlite';                          Why = 'core settings incl. the active UI = Columns UI (never-run profiles only)' }
 )
 
 $got = @()
@@ -58,8 +53,7 @@ $got | Format-Table -AutoSize
 # ---- privacy audit -------------------------------------------------------------------
 # These files ship to strangers, so anything machine-specific in them is a bug. Two classes,
 # both of which have actually occurred: absolute paths (a scanned folder, an artwork cache),
-# and screen geometry (UI Wizard stored the rig's 2560x1440, which would have opened an
-# oversized window on every smaller display).
+# and screen geometry that could open an oversized window on smaller displays.
 Write-Host 'auditing harvested files for machine-specific data...'
 $leaks = 0
 foreach ($f in Get-ChildItem $dest -File) {
@@ -88,13 +82,13 @@ else { Write-Host ("  {0} finding(s) -- review before shipping" -f $leaks) -Fore
 $cui = Join-Path $dest 'foo_ui_columns.dll.cfg'
 if (Test-Path $cui) {
     $txt = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($cui))
-    if ($txt -match 'verdant\\\\main\.js' -or $txt -match 'verdant\\main\.js') {
-        Write-Host '  layout OK: panel is bound to verdant\main.js' -ForegroundColor Green
+    if ($txt -match 'otoha\\\\main\.js' -or $txt -match 'otoha\\main\.js') {
+        Write-Host '  layout OK: panel is bound to otoha\main.js' -ForegroundColor Green
     } else {
-        Write-Warning '  layout does NOT reference verdant\main.js -- is the panel still on an inline script?'
+        Write-Warning '  layout does NOT reference otoha\main.js -- is the panel still on an inline script?'
     }
 }
 
 Write-Host ""
 Write-Host "harvested into: $dest"
-Write-Host "still to export by hand: the Layout-only .fcl (see README-DEV / plan Phase B)"
+Write-Host "still to export by hand: dist-config\otoha-layout.fcl (Columns UI Preferences > Export, layout only)"

@@ -1,6 +1,6 @@
 <#
-    Verdant -- installer for foobar2000
-    A modern Spotify-style theme. https://github.com/superziper/verdant-foobar2000-theme
+    Otoha -- installer for foobar2000
+    A local music theme. https://github.com/cliffhuang0611/otoha-foobar2000-theme
 
     Usage
         double-click install.bat
@@ -10,9 +10,9 @@
 
     What it does
         - finds your foobar2000 (portable or standard)
-        - backs up anything it replaces, and writes an uninstall script beside the backup
-        - copies the theme into <profile>\verdant\
-        - installs any of the three required components you don't already have
+        - optionally backs up replaced files with -Backup (newest three sets retained)
+        - copies the theme into <profile>\otoha\
+        - installs any of the two required components you don't already have
         - applies the layout, by whichever of two routes suits your setup
 
     What it will NOT do
@@ -24,7 +24,9 @@
 [CmdletBinding()]
 param(
     [string]$FoobarRoot,
-    [switch]$SkipComponents
+    [switch]$SkipComponents,
+    [switch]$Backup,
+    [ValidateRange(1,20)][int]$KeepBackups = 3
 )
 
 $ErrorActionPreference = 'Stop'
@@ -64,15 +66,15 @@ function Warn   ($m) { Write-Host "  $m" -ForegroundColor Yellow }
 #    the same payload, but checks each piece against what is already there first.
 $repoRoot = Split-Path -Parent $ScriptDir
 $layouts = @(
-    [pscustomobject]@{ Theme=(Join-Path $ScriptDir 'profile\verdant');    Comp=(Join-Path $ScriptDir 'profile\user-components-x64'); Cfg=(Join-Path $ScriptDir 'profile\configuration'); Fcl=(Join-Path $ScriptDir 'extras\verdant-layout.fcl'); Sqlite=(Join-Path $ScriptDir 'profile\config.sqlite') }
-    [pscustomobject]@{ Theme=(Join-Path $repoRoot  'theme\verdant');      Comp=(Join-Path $repoRoot  'components');                 Cfg=(Join-Path $repoRoot  'dist-config');          Fcl=(Join-Path $repoRoot  'dist-config\verdant-layout.fcl'); Sqlite=(Join-Path $repoRoot 'dist-config\config.sqlite') }
+    [pscustomobject]@{ Theme=(Join-Path $ScriptDir 'profile\otoha');    Comp=(Join-Path $ScriptDir 'profile\user-components-x64'); Cfg=(Join-Path $ScriptDir 'profile\configuration'); Fcl=(Join-Path $ScriptDir 'extras\otoha-layout.fcl') }
+    [pscustomobject]@{ Theme=(Join-Path $repoRoot  'theme\otoha');      Comp=(Join-Path $repoRoot  'components');                 Cfg=(Join-Path $repoRoot  'dist-config');          Fcl=(Join-Path $repoRoot  'dist-config\otoha-layout.fcl') }
 )
-$P = $layouts | Where-Object { Test-Path $_.Theme } | Select-Object -First 1
-if (-not $P) { throw "can't find the theme payload next to this script -- is the zip fully extracted?" }
+$payload = $layouts | Where-Object { Test-Path $_.Theme } | Select-Object -First 1
+if (-not $payload) { throw "can't find the theme payload next to this script -- is the zip fully extracted?" }
 
 Say ""
-Say "  Verdant -- a modern Spotify-style theme for foobar2000"
-Say "  by superziper"
+Say "  Otoha -- a local music theme for foobar2000"
+Say "  by cliffhuang0611, based on Verdant by superziper"
 Say ""
 
 # ---------------------------------------------------------------------------
@@ -162,31 +164,35 @@ Ok 'closed'
 # ---------------------------------------------------------------------------
 # 3. back up anything about to be replaced
 # ---------------------------------------------------------------------------
-Step '[3/6] Backing up'
-$stamp     = Get-Date -Format 'yyyy-MM-dd_HHmmss'
-$backupDir = Join-Path $fb.Profile "verdant-backup\$stamp"
-New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
-$restored = New-Object System.Collections.ArrayList   # files we overwrote  (restore on uninstall)
-$added    = New-Object System.Collections.ArrayList   # paths we created    (delete on uninstall)
+Step '[3/6] Backup policy'
+$stamp = Get-Date -Format 'yyyyMMdd_HHmmssfff'
+$backupDir = $null
+$backupRoot = Join-Path $fb.Profile 'otoha-backup'
+$restored = New-Object System.Collections.ArrayList
+$added = New-Object System.Collections.ArrayList
+if ($Backup) { Note "Backups requested; keeping the newest $KeepBackups managed sets." }
+else { Note 'Automatic backups disabled. Back up your profile manually if wanted, or use -Backup.' }
 
 function Save-Existing($path) {
-    if (Test-Path $path) {
-        $leaf = Split-Path -Leaf $path
-        Copy-Item $path -Destination (Join-Path $backupDir $leaf) -Recurse -Force
-        [void]$restored.Add($path)
-        return $true
+    if (-not $Backup -or -not (Test-Path -LiteralPath $path)) { return $false }
+    if (-not $script:backupDir) {
+        $script:backupDir = Join-Path $backupRoot ('managed-' + $stamp + '-' + [guid]::NewGuid().ToString('N').Substring(0,8))
+        New-Item -ItemType Directory -Path $script:backupDir | Out-Null
+        @{theme='Otoha';schema=1} | ConvertTo-Json | Set-Content (Join-Path $script:backupDir 'otoha-backup.json') -Encoding utf8
     }
-    return $false
+    Copy-Item -LiteralPath $path -Destination (Join-Path $script:backupDir (Split-Path -Leaf $path)) -Recurse -Force
+    [void]$restored.Add($path)
+    return $true
 }
 
 # ---------------------------------------------------------------------------
 # 4. the theme itself -- always ours, always replaced
 # ---------------------------------------------------------------------------
 Step '[4/6] Installing the theme'
-$themeDest = Join-Path $fb.Profile 'verdant'
-if (Test-Path $themeDest) { Note 'replacing an existing verdant\ folder'; [void]$restored.Add($themeDest); Copy-Item $themeDest -Destination (Join-Path $backupDir 'verdant') -Recurse -Force }
+$themeDest = Join-Path $fb.Profile 'otoha'
+if (Test-Path $themeDest) { Note 'replacing an existing otoha\ folder'; Save-Existing $themeDest | Out-Null }
 else { [void]$added.Add($themeDest) }
-Copy-Tree $P.Theme $themeDest $true
+Copy-Tree $payload.Theme $themeDest $true
 Ok ("theme -> {0}" -f $themeDest)
 
 # ---------------------------------------------------------------------------
@@ -196,11 +202,11 @@ Step '[5/6] Components'
 $compDest = Join-Path $fb.Profile 'user-components-x64'
 if ($SkipComponents) {
     Note 'skipped (-SkipComponents)'
-} elseif (-not (Test-Path $P.Comp)) {
+} elseif (-not (Test-Path $payload.Comp)) {
     Note 'no bundled components in this package'
 } else {
     New-Item -ItemType Directory -Force -Path $compDest | Out-Null
-    foreach ($c in Get-ChildItem $P.Comp -Directory) {
+    foreach ($c in Get-ChildItem $payload.Comp -Directory) {
         $target = Join-Path $compDest $c.Name
         if (Test-Path $target) {
             Note ("{0} -- already installed, left alone" -f $c.Name)
@@ -218,9 +224,7 @@ if ($SkipComponents) {
 Step '[6/6] Applying the layout'
 $cfgDir      = Join-Path $fb.Profile 'configuration'
 $cuiCfg      = Join-Path $cfgDir 'foo_ui_columns.dll.cfg'
-$sqlite      = Join-Path $fb.Profile 'config.sqlite'
 $hasCui      = Test-Path $cuiCfg
-$hasSqlite   = Test-Path $sqlite
 $manualSteps = New-Object System.Collections.ArrayList
 New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
 
@@ -228,55 +232,76 @@ if ($hasCui) {
     # --- route B: they already use Columns UI. Replace ONLY the layout, via the
     #     component's own import, so their colours/fonts/columns/filters survive.
     Note 'existing Columns UI configuration found -- importing the layout only'
-    if (-not (Test-Path $P.Fcl)) { throw "layout file missing: $($P.Fcl)" }
+    if (-not (Test-Path $payload.Fcl)) { throw "layout file missing: $($payload.Fcl)" }
     Save-Existing $cuiCfg | Out-Null
-    & $fb.Exe '/columnsui:import-quiet' $P.Fcl
+    & $fb.Exe '/columnsui:import-quiet' $payload.Fcl
     Start-Sleep -Seconds 2
     Ok 'layout imported (foobar2000 is starting up with it)'
     Note 'your colours, fonts, playlist columns and other settings were not touched'
 } else {
-    # --- route A: no Columns UI layout to preserve. Drop the prepared config in.
-    foreach ($f in 'foo_ui_columns.dll.cfg','foo_uie_jsplitter.dll.cfg','foo_ui_wizard.dll.cfg') {
-        $srcCfg = Join-Path $P.Cfg $f
-        $dstCfg = Join-Path $cfgDir $f
-        if (-not (Test-Path $srcCfg)) { continue }
-        if (Test-Path $dstCfg) { Note ("{0} -- already present, left alone" -f $f) }
-        else { Copy-Item $srcCfg $dstCfg -Force; [void]$added.Add($dstCfg); Ok ("{0} -- installed" -f $f) }
-    }
+    # Fresh installations create their own component settings; only import the layout.
+    [void]$manualSteps.Add('Preferences > Display > select Columns UI, then restart foobar2000')
+    [void]$manualSteps.Add('Preferences > Display > Columns UI > Import configuration: ' + $payload.Fcl)
 
-    if ($hasSqlite) {
-        # foobar has been run here before: its core settings are live and are NOT ours to
-        # replace. Selecting Columns UI is then the one thing the user has to do.
-        Warn 'foobar2000 has been run on this profile before, so its core settings were left as they are.'
-        [void]$manualSteps.Add('Preferences > Display > set the user interface to "Columns UI", then restart foobar2000')
-    } elseif (Test-Path $P.Sqlite) {
-        Copy-Item $P.Sqlite $sqlite -Force
-        [void]$added.Add($sqlite)
-        Ok 'core settings installed (user interface set to Columns UI)'
-    } else {
-        [void]$manualSteps.Add('Preferences > Display > set the user interface to "Columns UI", then restart foobar2000')
-    }
 }
 
 # ---------------------------------------------------------------------------
 # uninstall script
 # ---------------------------------------------------------------------------
+# Restoration helpers exist only when an explicitly requested backup contains replaced files.
+if ($backupDir) {
 $un = @()
-$un += "# Undo the Verdant install of $stamp. Close foobar2000 first."
+$un += "# Undo the Otoha install of $stamp. Close foobar2000 first."
 $un += '$ErrorActionPreference = ''Stop'''
-$un += 'if (Get-Process -Name foobar2000 -ErrorAction SilentlyContinue) { Write-Host "close foobar2000 first"; exit 1 }'
+$un += ('$targetExe = ' + "'" + $fb.Exe.Replace("'", "''") + "'")
+$un += ('$targetProfile = ' + "'" + $fb.Profile.Replace("'", "''") + "'")
+$un += 'if ((Test-Path (Join-Path $targetProfile "running")) -or @(Get-Process -Name foobar2000 -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $targetExe }).Count) { Write-Host "close this foobar2000 installation first"; exit 1 }'
 $un += '$backup = Split-Path -Parent $MyInvocation.MyCommand.Path'
-foreach ($a in $added)    { $un += ('if (Test-Path "{0}") {{ Remove-Item -Recurse -Force "{0}"; Write-Host "removed {0}" }}' -f $a) }
-foreach ($r in $restored) { $un += ('Copy-Item (Join-Path $backup "{0}") -Destination "{1}" -Recurse -Force; Write-Host "restored {1}"' -f (Split-Path -Leaf $r), $r) }
-$un += 'Write-Host "Verdant uninstalled."'
-$un -join "`r`n" | Set-Content -Path (Join-Path $backupDir 'uninstall.ps1') -Encoding utf8
+foreach ($a in $added) {
+    $literal = "'" + $a.Replace("'", "''") + "'"
+    $un += ('if (Test-Path -LiteralPath ' + $literal + ') { Remove-Item -LiteralPath ' + $literal + ' -Recurse -Force; Write-Host ("Removed: " + ' + $literal + ') }')
+}
+foreach ($r in $restored) {
+    $leaf = "'" + (Split-Path -Leaf $r).Replace("'", "''") + "'"
+    $destination = "'" + $r.Replace("'", "''") + "'"
+    $un += ('$source = Join-Path $backup ' + $leaf)
+    $un += 'if (-not (Test-Path -LiteralPath $source)) { throw "Backup missing: $source" }'
+    $un += 'if ((Get-Item -LiteralPath $source).PSIsContainer) {'
+    $un += ('  & robocopy $source ' + $destination + ' /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Null')
+    $un += '  if ($LASTEXITCODE -ge 8) { throw "Backup restoration failed." }; $global:LASTEXITCODE = 0'
+    $un += ('} else { Copy-Item -LiteralPath $source -Destination ' + $destination + ' -Force }')
+    $un += ('Write-Host ("Restored: " + ' + $destination + ')')
+}
+$un += 'Write-Host "Otoha installation backup restored."'
+$un -join "`r`n" | Set-Content -Path (Join-Path $backupDir 'restore-backup.ps1') -Encoding utf8
+@'
+@echo off
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0restore-backup.ps1"
+set "otoha_exit=%ERRORLEVEL%"
+echo.
+pause
+exit /b %otoha_exit%
+'@ | Set-Content -Path (Join-Path $backupDir 'restore-backup.bat') -Encoding ascii
+
+    $managed = @(Get-ChildItem -LiteralPath $backupRoot -Directory | Where-Object {
+        if ($_.Name -notmatch '^managed-[0-9]{8}_[0-9]{9}-[a-f0-9]{8}$') { return $false }
+        $marker=Join-Path $_.FullName 'otoha-backup.json'
+        if (-not (Test-Path -LiteralPath $marker)) { return $false }
+        try { $meta=Get-Content -LiteralPath $marker -Raw | ConvertFrom-Json; return $meta.theme -eq 'Otoha' -and $meta.schema -eq 1 }
+        catch { return $false }
+    } | Sort-Object Name -Descending)
+    foreach ($old in @($managed | Select-Object -Skip $KeepBackups)) {
+        Note ('Removing oldest managed backup: ' + $old.FullName)
+        Remove-Item -LiteralPath $old.FullName -Recurse -Force
+    }
+}
 
 # ---------------------------------------------------------------------------
 # done
 # ---------------------------------------------------------------------------
 Say ''
 Say '  ------------------------------------------------------------'
-Ok  'Verdant installed.'
+Ok  'Otoha installed.'
 Say ''
 if ($manualSteps.Count) {
     Warn 'One step left for you:'
@@ -284,8 +309,9 @@ if ($manualSteps.Count) {
     Say ''
 }
 Say  '  Start foobar2000 to see it.'
-Note ('backup + uninstall.ps1: {0}' -f $backupDir)
+if ($backupDir) { Note ('Backup + restore-backup.bat: {0}' -f $backupDir) }
+else { Note 'No backup folder or restoration helper was created.' }
 Say  ''
-Note 'Verdant reads your Media Library: if Home and All Songs look empty, add a'
+Note 'Otoha reads your Media Library: if Home and All Songs look empty, add a'
 Note 'music folder under Preferences > Media Library.'
 Say  ''

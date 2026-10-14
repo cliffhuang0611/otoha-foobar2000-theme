@@ -6,14 +6,14 @@
 
 *Each song is a leaf. Together, they form a music library that’s uniquely yours.*
 
-[Source code](https://github.com/cliffhuang0611/otoha-foobar2000-theme/tree/personal) · [Based on Verdant](https://github.com/superziper/verdant-foobar2000-theme)
+[Source code](https://github.com/cliffhuang0611/otoha-foobar2000-theme/tree/main) · [Based on Verdant](https://github.com/superziper/verdant-foobar2000-theme)
 
 ![foobar2000](https://img.shields.io/badge/foobar2000-v2%20·%2064--bit-70C4DE)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-70C4DE)
 
-**Otoha is developed on `personal`; `master` retains the upstream Verdant reference.**
+**`main` is the default branch for Otoha.**
 
-*Current Otoha screenshots will be added here.*
+<img src="docs/images/otoha-home-grid.png" alt="Otoha Home with playlist cards, artist grid, and retained Play order" width="900">
 
 </div>
 
@@ -29,7 +29,7 @@ visual identity and expanded library, navigation, queue, and lyrics workflows.
 
 Everything on screen is custom-drawn in a [JSplitter](https://hydrogenaud.io/) panel running under
 [Columns UI](https://github.com/reupen/columns_ui) — sidebar, home, playlist and All Songs views,
-search, queue and lyrics pane, player bar, fullscreen mode, even the window title bar. No stock
+search, queue and lyrics pane, player bar, fullscreen mode, and the menu strip beneath the native Windows title bar. No stock
 foobar2000 widgets are involved, which is why it looks nothing like default foobar2000.
 
 Otoha plays your local music through foobar2000. Online lyric lookup uses LRCLIB only when
@@ -37,14 +37,115 @@ you choose to search. It does not connect to Spotify.
 
 ---
 
+## Install
+
+Otoha installs directly into **foobar2000 v2, 64-bit** on Windows 10 or 11.
+It uses **Columns UI** and **JSplitter**, included under `components/` in this repository.
+No Verdant installation, window-management component, extra fonts, or JavaScript build step is required.
+
+### Install manually
+
+1. Install [foobar2000](https://www.foobar2000.org/download), choosing **64-bit**.
+   To test Otoha separately, choose **Portable installation** in a new folder.
+2. Download this repository’s `main` branch using **Code → Download ZIP** and extract it.
+3. Close foobar2000. Find its **profile folder**:
+   - Standard installation: `%APPDATA%\foobar2000-v2\`.
+   - Portable installation: `<foobar2000 folder>\profile\`.
+   Back up that folder before changing an existing setup.
+4. Copy the component folders from `components/` into `<profile>\user-components-x64\`.
+   Keep any existing installations of Columns UI or JSplitter rather than replacing them.
+5. Copy **the contents of `theme/otoha/`** into `<profile>\otoha\`.
+6. Start foobar2000 and select **Columns UI** when asked. If needed, select it under
+   Preferences → Display and restart.
+7. Open Preferences → Display → Columns UI and click **Import configuration**.
+   Import **`dist-config\otoha-layout.fcl`**, selecting its **Main Layout**, **Toolbar Layout**,
+   and **Misc Layout** entries where offered. Release packages put the FCL in `extras/`.
+8. Apply the changes. If JSplitter cannot find the script, right-click its panel → **Configure**
+   and set the profile-relative file path to **`otoha\main.js`**, then reload.
+9. Add your music folders under Preferences → **Media Library**.
+
+Copy theme scripts and components only. **Do not copy CFG files or `config.sqlite` into your
+profile.** Let your own foobar2000 installation create its configuration.
+For an existing Columns UI setup, export your current configuration before importing Otoha so
+that you can restore your preferred layout later.
+
+### Updating Otoha
+
+Close foobar2000 and back up `<profile>\otoha\`, then replace its contents with the latest
+`theme/otoha/` files. Keep your existing layout, panel properties, and profile configuration.
+Start foobar2000 again. No component reinstall or layout import is needed for ordinary script updates.
+
+### Switching from an earlier Verdant-based setup
+
+Copy Otoha’s scripts into `<profile>\otoha\`, then change your existing JSplitter panel’s file
+script path from `verdant\main.js` to `otoha\main.js`. If it uses an absolute path, change the
+folder portion to `otoha`. Apply and reload; keeping the same panel retains its properties.
+Old Play order state is not migrated. Start playback again to create an Otoha Play order.
+Check any global `Verdant: …` keyboard bindings against the renamed `Otoha: …` commands.
+Once the new setup works, the old theme folder can be removed.
+
+### Remove Otoha
+
+Stop playback, then choose the interface you want to use:
+
+- **Default User Interface:** open Preferences → Display, select **Default User Interface**,
+  and restart. Skip the Columns UI steps below and go directly to **Delete Otoha’s files**.
+- **Keep Columns UI:** replace its Otoha layout using the following steps before deleting the scripts.
+
+1. Open **File → Preferences → Display → Columns UI**.
+2. Click **Quick setup** on the **Main/Setup** page (the label depends on your Columns UI version).
+   Choose a built-in layout with a normal playlist, such as **Playlist switcher**, and confirm.
+   If you exported your previous configuration, you can import that instead.
+3. Confirm that the normal playlist interface works. Under the **Layout** page, remove any
+   other saved presets containing the Otoha JSplitter panel, if you created additional ones.
+
+**Delete Otoha’s files — for either interface:**
+
+1. Close foobar2000. Delete only the Otoha script folder for your installation:
+   - **Standard installation:** press Win+R, enter `%APPDATA%\foobar2000-v2`, and delete the
+     **`otoha`** folder inside it. Keep the rest of the profile.
+   - **Portable installation:** open your foobar2000 installation folder, then `profile`, and
+     delete only **`profile\otoha\`**.
+2. Start foobar2000 again. Your music library, personal playlists, output device, and DSP settings remain.
+
+If you chose Default User Interface, Columns UI’s saved Otoha layout remains inactive.
+Before switching back to Columns UI later, use its **Quick setup** to replace that layout;
+otherwise JSplitter will report the deleted `otoha\main.js` script as missing.
+
+Columns UI and JSplitter can stay installed. Remove either through Preferences → Components
+only if you no longer use it for another layout. Otoha’s internal playlists (`__otoha_…`) and
+`Otoha: …` keyboard bindings can also be removed through foobar2000 if no longer needed.
+Deleting playlists does not require deleting their music files.
+**Do not delete your entire profile or `config.sqlite` to remove Otoha.**
+
+**Already deleted the scripts and seeing a red JSplitter panel?** Close the error dialog and use
+Columns UI’s **Quick setup** as described above. The message about `otoha\main.js` means the
+saved layout points to a missing script; it does not mean the whole foobar2000 installation is corrupt.
+
+To reinstall, copy `theme/otoha/` into the profile again and import `otoha-layout.fcl`.
+You do not need to reinstall components that are still present.
+Optional installer backups are disabled by default. To request them, run:
+
+```powershell
+.\tools\install.bat -FoobarRoot 'C:\Path\To\Your\foobar2000' -Backup
+```
+
+Replace the example path with your installation folder. Backups are created only when existing
+files are replaced; the newest **three managed backup sets** are retained (`-KeepBackups` changes
+that limit). Older backup folders from previous installer versions are left alone.
+Each explicit backup includes `restore-backup.bat`; restoring it may bring back a previous Otoha
+setup, so use the manual removal procedure above when you want to stop using the theme.
+
+
+---
+
 ## What Otoha adds
 
 This fork builds on [superziper/verdant-foobar2000-theme](https://github.com/superziper/verdant-foobar2000-theme).
-The features below describe Otoha’s `personal` branch compared with upstream Verdant.
+The features below describe Otoha’s `main` branch compared with upstream Verdant.
 Original features such as shuffle, fullscreen, visualizers, cover mosaics, and ReplayGain remain
-available. Internal `verdant` folder names and existing `Verdant: …` command names are retained
-for compatibility. Upstream release downloads install Verdant; apply Otoha’s scripts as described
-in the installation section.
+available. Theme files live in `otoha`, and registered menu commands use `Otoha: …`.
+Otoha installs independently; a Verdant installation is not required.
 
 ### Home and responsive layout
 
@@ -161,7 +262,7 @@ in the installation section.
 - Playlist creation and rename shortcuts, plus caret/selection/clipboard editing in the rename dialog.
 - **Confirmed file deletion** is distinct from playlist removal. Library Delete, playlist Shift+Delete,
   and the track menu's Delete files action ask before invoking foobar2000's File Operations command.
-  After files disappear, Verdant refreshes its cached library, Search, artist, and album views.
+  After files disappear, Otoha refreshes its cached library, Search, artist, and album views.
   Foobar2000's underlying library still relies on folder monitoring or a native rescan.
 
 ### Search, metadata, lyrics, and audio controls
@@ -242,7 +343,7 @@ These shortcuts work when Otoha has keyboard focus, unless a foobar2000 shortcut
 
 Text fields retain their editing shortcuts. Selected track results take priority for Delete;
 selected Search/filter text takes priority for Ctrl+C. Rename remains a modal text editor.
-See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional details.
+See [keyboard reference](theme/otoha/KEYBOARD_SHORTCUTS.txt) for additional details.
 
 ### Compatibility and known limitations
 
@@ -251,7 +352,7 @@ See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional de
 - Remove conflicting foobar2000 hotkeys if they intercept panel keys, particularly the native
   Ctrl+F Search assignment. Bind Ctrl+R to your preferred native rescan command yourself.
 - Panel keyboard focus at startup is host-dependent; click the theme panel if shortcuts are not received.
-  Optional `Verdant: …` menu commands register only when the host supports that API; assigning
+  Optional `Otoha: …` menu commands register only when the host supports that API; assigning
   application-wide shortcuts is manual.
 - Japanese input works in the inline fields, but Windows IME composition/candidates may appear
   near the primary monitor's top-left corner. This fork keeps inline editing rather than adding
@@ -262,34 +363,13 @@ See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional de
 
 ## Screenshots
 
-Fresh Otoha screenshots are pending. The images below show **upstream Verdant**, not Otoha’s
-current colors or added controls.
+Otoha’s charcoal interface and Frosted Cyan accents, shown with a local music library.
+Click an image to view it at full resolution.
 
-<details>
-<summary>Upstream Verdant screenshots — reference only</summary>
-
-<img src="docs/images/home.png" alt="Upstream Verdant Home reference" width="900">
-
-<table>
-<tr>
-<td width="50%"><img src="docs/images/playlist.png" alt="Playlist view"><br><sub><b>Playlist</b></sub></td>
-<td width="50%"><img src="docs/images/all-songs.png" alt="All Songs view"><br><sub><b>All Songs</b></sub></td>
-</tr>
-<tr>
-<td><img src="docs/images/search.png" alt="Search"><br><sub><b>Search</b></sub></td>
-<td><img src="docs/images/artist.png" alt="Artist page"><br><sub><b>Artist</b></sub></td>
-</tr>
-<tr>
-<td><img src="docs/images/fullscreen.png" alt="Fullscreen now playing"><br><sub><b>Fullscreen</b></sub></td>
-<td><img src="docs/images/fullscreen-lyrics.png" alt="Fullscreen synced lyrics"><br><sub><b>Lyrics</b></sub></td>
-</tr>
-<tr>
-<td><img src="docs/images/fullscreen-visualizer.png" alt="Fullscreen visualizer"><br><sub><b>Visualizer</b></sub></td>
-<td><img src="docs/images/playlist-empty-rename.png" alt="Empty playlist and rename dialog"><br><sub><b>Editing</b></sub></td>
-</tr>
-</table>
-
-</details>
+| Artist and lyrics | Lyrics editor |
+| --- | --- |
+| [![Artist albums with Japanese lyrics](docs/images/otoha-artist.png)](docs/images/otoha-artist.png) | [![Lyrics editor with timestamps and playback controls](docs/images/otoha-lyrics-editor.png)](docs/images/otoha-lyrics-editor.png) |
+| Browse an artist’s albums alongside the lyrics panel. | Add timestamps and save lyrics to files or track metadata. |
 
 ---
 
@@ -310,61 +390,7 @@ current colors or added controls.
   volume knob between albums. [How it works ↓](#normalize-volume)
 - **Shuffle that tells the truth** — shuffle plays from a hidden shuffled copy of the playlist, so
   the "next up" list is the *actual* upcoming order, not a guess.
-- **Custom title bar** — frameless window with real File / Library / Help menus and window controls.
-
----
-
-## Install
-
-### Install Otoha from source
-
-Upstream release ZIPs install the original theme. To use these customizations, first set up an
-upstream Verdant installation using the instructions below, then use the `personal` branch of this
-repository and copy **the contents of `theme/verdant/`** into your existing `<profile>\verdant\`
-directory. Back up that directory first. Update theme source files only; keep your existing
-foobar2000 profile settings and layout configuration.
-
-For a standard install the destination is `%APPDATA%\foobar2000-v2\verdant\`; for a portable
-install it is `<foobar2000 root>\profile\verdant\`. Reload JSplitter with Ctrl+F5 after copying.
-No npm build, bundler, or DLL compilation is required for ordinary theme changes.
-
-### Upstream base installation
-
-1. Install foobar2000 as **portable** from the [official website](https://www.foobar2000.org/download).
-2. Download **`Verdant-vX.Y.Z.zip`** from the
-   **[latest release](https://github.com/superziper/verdant-foobar2000-theme/releases/latest)**.
-3. Extract the **`profile`** folder from the zip into foobar2000's **root folder** (the one containing
-   `foobar2000.exe`).
-4. Start foobar2000 and enjoy.
-
-That's it. Columns UI, JSplitter and UI Wizard are bundled — nothing to install separately. And
-**no fonts to install**: Verdant uses Segoe UI and Segoe MDL2 Assets, both of which ship with
-Windows 10 and 11.
-
-> For a **standard (non-portable)** install, extract the *contents* of `profile` into
-> `%APPDATA%\foobar2000-v2` instead, then start foobar2000.
-
-### Already have a foobar2000 you've set up?
-
-**Don't extract over it** — `profile` carries a layout and core settings that would replace your own.
-Close foobar2000, double-click **`install.bat`**, start foobar2000.
-
-The installer checks before it writes. It adds only the components you're missing, and if you already
-use Columns UI it replaces **only the panel layout** — your colours, fonts, playlist columns and
-filters survive, because it uses Columns UI's own layout import rather than overwriting its config.
-It backs up whatever it touches and writes an `uninstall.ps1` beside the backup in
-`<profile>\verdant-backup\<date>\`.
-
-<details>
-<summary>Prefer to import the layout yourself?</summary>
-
-`extras\verdant-layout.fcl` is the layout on its own. Copy `profile\verdant\` into your profile, then
-Preferences → Display → Columns UI → **Import**, ticking **Main Layout** and **Toolbar Layout**.
-</details>
-
-### Uninstall
-
-Run `uninstall.ps1` from `<profile>\verdant-backup\<date>\`, then delete `<profile>\verdant\`.
+- **Custom menu strip** — real File / Library / Help menus beneath the native Windows title bar.
 
 ---
 
@@ -393,10 +419,10 @@ Right-click an empty area outside the playlist view → **Panel properties** (th
 Manual property edits take effect on panel reload (**Ctrl+F5** or JSplitter → **Reload**).
 Dragging the sidebar or using the artist display buttons applies and saves those settings immediately.
 Queue width and the default sidebar width remain in
-[`theme/verdant/core/tokens.js`](theme/verdant/core/tokens.js).
+[`theme/otoha/core/tokens.js`](theme/otoha/core/tokens.js).
 
 Theme colors are centralized as hex values in `THEME_COLORS` in
-[`theme/verdant/core/palette.js`](theme/verdant/core/palette.js). Role names stay the same when
+[`theme/otoha/core/palette.js`](theme/otoha/core/palette.js). Role names stay the same when
 changing the palette: `main` is the outer background, `surface` the panels, `secondary` raised
 surfaces, and `text`, `textSecondary`, and `textMuted` control text. `accent` is the active color,
 with `accentHover`, `accentPressed`, `accentDisabled`, and `onAccent` for interaction states and
@@ -442,8 +468,7 @@ foobar's own *ReplayGain → Remove ReplayGain information from files*.
 
 - **foobar2000 v2, 64-bit** (developed and tested on 2.25)
 - **Windows 10 or 11**
-- Bundled and installed for you: **Columns UI**, **JSplitter** (`foo_uie_jsplitter`),
-  **UI Wizard** (`foo_ui_wizard`, optional — without it you keep the normal Windows title bar)
+- Bundled and installed for you: **Columns UI** and **JSplitter** (`foo_uie_jsplitter`)
 
 ---
 
@@ -459,7 +484,7 @@ Otoha is a full visual replacement — layout, colours, fonts, every control —
 
 **Can I still use the Default UI / my old Columns UI layout?** Yes. Columns UI keeps layout presets,
 so you can switch back at Preferences → Display → Columns UI → Layout. If you installed with
-`install.bat`, your previous layout is also backed up and restorable.
+`install.bat -Backup`, replaced files are backed up and restorable; without `-Backup` no backup is created.
 
 **What actions affect audio files?** Playlist cleanup, clearing, deletion, and cut/paste affect
 playlist entries only. File deletion explicitly asks for confirmation and delegates to foobar2000.
@@ -474,20 +499,20 @@ can rename, move, convert, or otherwise modify files through foobar2000’s nati
 ## For developers
 
 ```
-theme/verdant/        the theme — copied verbatim into <profile>\verdant\
+theme/otoha/        the theme — copied verbatim into <profile>\otoha\
   main.js             entry point: declares the panel, sets the module load order
   core/               props, tokens, utils, title formats, memory caps, job scheduler
   data/               art, library, playback, lyrics, replaygain, dedupe, playlist edit
   ui/                 skeletons + shimmer, window chrome and shared widgets
   views/              nav, playlist, home, artist, songs, search, queue, bar, fullscreen
   app.js              panel state, layout, paint dispatch, input, foobar callbacks
-components/           the three foobar components, bundled for the installer
-dist-config/          layout + core config harvested from a clean-room foobar
+components/           the two foobar components, bundled for the installer
+dist-config/          Otoha layout and installer component snapshots
 tools/
   deploy.ps1          dev sync into the foobar profile ( -Watch to auto-sync )
-  install.ps1/.bat    the shipped installer
-  harvest.ps1         pull configuration out of the clean-room rig
-  make-release.ps1    build Verdant-vX.Y.Z.zip
+  install.ps1/.bat    optional installer; manual setup is described above
+  harvest.ps1         pull configuration out of a clean-room rig
+  make-release.ps1    build Otoha-vX.Y.Z.zip
 ```
 
 Every module is evaluated into **one shared global scope**, so any module can call into any other.
@@ -498,36 +523,16 @@ The whole theme runs on **one thread shared with the UI**, which is why the code
 slices long builds across timer ticks, and scopes repaints to the one panel that changed.
 
 ```powershell
-setx VERDANT_PROFILE D:\foobar2000\profile     # once, so deploy knows where to put it
-.\tools\deploy.ps1 -Watch                      # mirrors theme\verdant into the profile on every save
+setx OTOHA_PROFILE D:\foobar2000\profile     # once, so deploy knows where to put it
+.\tools\deploy.ps1 -Watch                    # mirrors theme\otoha into the profile on every save
 ```
 
-`deploy.ps1` auto-detects a standard install; for a portable one, set `VERDANT_PROFILE` as above or
+`deploy.ps1` auto-detects a standard install; for a portable one, set `OTOHA_PROFILE` as above or
 pass `-FoobarProfile`.
 
 Then reload the panel (right-click → Reload). `console.log` goes to foobar's console (View → Console).
 Deploy copies the same folder to the same place the installer does, so there's no separate build and
 no second code path.
-
-### Personal branch workflow in WSL
-
-Work on `personal` and keep `master` as the upstream reference. Source changes are loaded directly
-by JSplitter. Before deploying:
-
-```bash
-git status --short
-find theme/verdant -name '*.js' -print0 | xargs -0 -n1 node --check
-git diff --check
-```
-
-If your checkout has the optional local WSL helpers, `./tools/local/deploy.sh --backup` backs up
-and copies the theme into your configured foobar2000 profile. Later deployments can use
-`./tools/local/deploy.sh`. These helpers may be ignored/local-only and are not required; copying
-the source directory or using the upstream PowerShell deployment script also works.
-
-Reload with **Ctrl+F5** and test in Windows foobar2000. Node syntax checks do not validate JSplitter
-APIs, GDI rendering, focus handling, or IME behavior. **F5** refreshes view data only and does not
-load edited script files.
 
 ---
 
@@ -538,8 +543,7 @@ Otoha is customized and maintained by **[cliffhuang0611](https://github.com/clif
 Based on **[Verdant](https://github.com/superziper/verdant-foobar2000-theme)**, originally built by
 **[superziper](https://github.com/superziper)**. The original copyright and MIT license are preserved.
 
-Standing on: [Columns UI](https://github.com/reupen/columns_ui) by Reupen Shah, **JSplitter** by LUR,
-and [UI Wizard](https://github.com/The-Wizardium/UI-Wizard) by The Wizardium.
+Standing on: [Columns UI](https://github.com/reupen/columns_ui) by Reupen Shah and **JSplitter** by LUR.
 
 ## Licence
 
@@ -547,8 +551,8 @@ Otoha’s theme code is [MIT licensed](LICENSE), retaining Verdant’s original 
 the theme’s own work under `theme/`, `tools/`,
 `dist-config/` and `docs/`.
 
-The three foobar2000 components bundled for the one-step install are **not** Verdant's work and keep
-their own licences (Columns UI is LGPL-3.0, UI Wizard is MIT). See
+The two foobar2000 components bundled for the one-step install are **not** Otoha's work and keep
+their own licences (Columns UI is LGPL-3.0). See
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 Not affiliated with or endorsed by Spotify. "Spotify" is a trademark of Spotify AB; this is a

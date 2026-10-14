@@ -1,5 +1,5 @@
 <#
-    deploy.ps1 -- dev sync: copies theme\verdant\ into the foobar2000 profile.
+    deploy.ps1 -- dev sync: copies theme\otoha\ into the foobar2000 profile.
 
     The shipped installer copies the exact same folder to the exact same place, so what
     you iterate on here is what users get -- there is no build step and no second code path.
@@ -9,11 +9,11 @@
         .\tools\deploy.ps1 -Watch       # copy now, then re-copy whenever a source file changes
 
     The profile is auto-detected (portable install via the registry, else %APPDATA%\foobar2000-v2).
-    Override it with -FoobarProfile, or set VERDANT_PROFILE once and forget about it.
+    Override it with -FoobarProfile, or set OTOHA_PROFILE once and forget about it.
 
     First time only, point the panel at the deployed copy:
         right-click the JSplitter panel > Configure > Script source: File
-        > verdant\main.js   (paths are relative to the profile folder)
+        > otoha\main.js   (paths are relative to the profile folder)
 
     After that, iterate with: edit -> deploy -> right-click panel > Reload.
     console.log output goes to foobar's console (View > Console).
@@ -24,16 +24,16 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$src = Join-Path (Split-Path -Parent $PSScriptRoot) 'theme\verdant'
+$src = Join-Path (Split-Path -Parent $PSScriptRoot) 'theme\otoha'
 if (-not (Test-Path $src)) { throw "theme source not found: $src" }
 
 # Find the profile rather than hardcoding one: this script is public, and one developer's
 # folder layout is both useless to everyone else and nobody else's business.
 #   1. -FoobarProfile
-#   2. $env:VERDANT_PROFILE   (set this once and forget it)
+#   2. $env:OTOHA_PROFILE   (set this once and forget it)
 #   3. a portable install found via the registry
 #   4. %APPDATA%\foobar2000-v2
-if (-not $FoobarProfile) { $FoobarProfile = $env:VERDANT_PROFILE }
+if (-not $FoobarProfile) { $FoobarProfile = $env:OTOHA_PROFILE }
 if (-not $FoobarProfile) {
     foreach ($key in 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\foobar2000',
                      'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\foobar2000') {
@@ -53,10 +53,10 @@ if (-not $FoobarProfile -or -not (Test-Path $FoobarProfile)) {
     throw ("couldn't find a foobar2000 profile. Pass one:`n" +
            "    .\tools\deploy.ps1 -FoobarProfile 'D:\foobar2000\profile'`n" +
            "  or set it once:`n" +
-           "    setx VERDANT_PROFILE D:\foobar2000\profile")
+           "    setx OTOHA_PROFILE D:\foobar2000\profile")
 }
 
-$dest = Join-Path $FoobarProfile 'verdant'
+$dest = Join-Path $FoobarProfile 'otoha'
 
 function Sync-Theme {
     # /MIR so a module deleted here also disappears from the profile -- a stale .js left behind
@@ -73,12 +73,16 @@ function Sync-Theme {
 Sync-Theme
 
 if ($Watch) {
-    Write-Host 'Watching theme\verdant for changes -- edit + save, then reload the panel. Ctrl+C to stop.'
-    function Latest { (Get-ChildItem -Recurse $src -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1).LastWriteTime }
-    $last = Latest
+    Write-Host 'Watching theme\otoha for changes -- edit + save, then reload the panel. Ctrl+C to stop.'
+    function Source-State {
+        (Get-ChildItem -Recurse $src -File | Sort-Object FullName | ForEach-Object {
+            '{0}|{1}|{2}' -f $_.FullName, $_.Length, $_.LastWriteTimeUtc.Ticks
+        }) -join "`n"
+    }
+    $last = Source-State
     while ($true) {
         Start-Sleep -Seconds 1
-        $cur = Latest
-        if ($cur -gt $last) { $last = $cur; Sync-Theme }
+        $cur = Source-State
+        if ($cur -ne $last) { Sync-Theme; $last = $cur }
     }
 }
