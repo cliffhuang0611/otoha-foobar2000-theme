@@ -1,45 +1,50 @@
 <div align="center">
 
-# Verdant
+# Otoha — 音葉
 
-### A personal fork of the Spotify-style theme for foobar2000
+### Your music, your own canopy.
 
-*A foobar2000 skin that turns the world's most configurable audio player into something
-that looks like a modern streaming app.*
+*Each song is a leaf. Together, they form a music library that’s uniquely yours.*
 
-[![Release](https://img.shields.io/github/v/release/superziper/verdant-foobar2000-theme?color=70C4DE&label=release)](https://github.com/superziper/verdant-foobar2000-theme/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/superziper/verdant-foobar2000-theme/total?color=70C4DE)](https://github.com/superziper/verdant-foobar2000-theme/releases)
+[Source code](https://github.com/cliffhuang0611/otoha-foobar2000-theme/tree/personal) · [Based on Verdant](https://github.com/superziper/verdant-foobar2000-theme)
+
 ![foobar2000](https://img.shields.io/badge/foobar2000-v2%20·%2064--bit-70C4DE)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-70C4DE)
 
-**Personal customizations live on `personal`; `master` retains the upstream theme.**
+**Otoha is developed on `personal`; `master` retains the upstream Verdant reference.**
 
-<img src="docs/images/home.png" alt="Verdant home view: playlist shelf, artist grid and queue" width="900">
+*Current Otoha screenshots will be added here.*
 
 </div>
 
 ---
 
-**Verdant** is a modern **foobar2000 theme** — a complete visual skin that restyles your **local**
-music library and playlists into a clean, dark, Spotify-inspired interface.
+**Otoha** is a **foobar2000 theme** for your local music collection, with a charcoal interface,
+Frosted Cyan accents, an editable playback order, and integrated lyric search and timing tools.
+
+Its name combines **音 (*oto*, sound)** and **葉 (*ha*, leaf)**: individual songs become the leaves
+of a collection that grows differently for every listener. Otoha is based on
+[Verdant by superziper](https://github.com/superziper/verdant-foobar2000-theme), with its own
+visual identity and expanded library, navigation, queue, and lyrics workflows.
 
 Everything on screen is custom-drawn in a [JSplitter](https://hydrogenaud.io/) panel running under
 [Columns UI](https://github.com/reupen/columns_ui) — sidebar, home, playlist and All Songs views,
 search, queue and lyrics pane, player bar, fullscreen mode, even the window title bar. No stock
 foobar2000 widgets are involved, which is why it looks nothing like default foobar2000.
 
-It does **not** connect to Spotify's service and plays nothing you don't already own — it's a
-look, not a client.
+Otoha plays your local music through foobar2000. Online lyric lookup uses LRCLIB only when
+you choose to search. It does not connect to Spotify.
 
 ---
 
-## Personal fork: changes from `master`
+## What Otoha adds
 
 This fork builds on [superziper/verdant-foobar2000-theme](https://github.com/superziper/verdant-foobar2000-theme).
-The features below describe the current `personal` branch compared with the local `master` branch.
-The release badges, release downloads, and screenshots in this README belong to upstream; those downloads
-and images do not include these personal changes. Original features such as shuffle, fullscreen,
-visualizers, cover mosaics, and ReplayGain remain available.
+The features below describe Otoha’s `personal` branch compared with upstream Verdant.
+Original features such as shuffle, fullscreen, visualizers, cover mosaics, and ReplayGain remain
+available. Internal `verdant` folder names and existing `Verdant: …` command names are retained
+for compatibility. Upstream release downloads install Verdant; apply Otoha’s scripts as described
+in the installation section.
 
 ### Home and responsive layout
 
@@ -182,7 +187,7 @@ visualizers, cover mosaics, and ReplayGain remain available.
   including Japanese text. A dialog lists matches by album, duration, and synchronized/plain format,
   with a scrollable lyrics preview. Separate **Use lyrics** and **Edit lyrics** buttons apply the
   selected result or open it in a native multiline editor with Japanese input support.
-  Lyrics context menus use Verdant's custom styling. **Add current timestamp** stamps the cursor's line
+  Lyrics context menus use Otoha's custom styling. **Add current timestamp** stamps the cursor's line
   using that track's playback position, replaces existing timing, and advances to the next line.
   **F3** performs the same timestamp action while the editor is open.
   **Delete lyrics from metadata** offers quick removal of embedded lyric fields after confirmation;
@@ -209,7 +214,7 @@ visualizers, cover mosaics, and ReplayGain remain available.
 
 ### Keyboard shortcuts
 
-These shortcuts work when Verdant has keyboard focus, unless a foobar2000 shortcut intercepts them.
+These shortcuts work when Otoha has keyboard focus, unless a foobar2000 shortcut intercepts them.
 
 | Shortcut | Action |
 |---|---|
@@ -245,7 +250,7 @@ See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional de
   Native file operations and conversion options depend on installed foobar2000 components.
 - Remove conflicting foobar2000 hotkeys if they intercept panel keys, particularly the native
   Ctrl+F Search assignment. Bind Ctrl+R to your preferred native rescan command yourself.
-- Panel keyboard focus at startup is host-dependent; click Verdant if shortcuts are not received.
+- Panel keyboard focus at startup is host-dependent; click the theme panel if shortcuts are not received.
   Optional `Verdant: …` menu commands register only when the host supports that API; assigning
   application-wide shortcuts is manual.
 - Japanese input works in the inline fields, but Windows IME composition/candidates may appear
@@ -256,6 +261,14 @@ See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional de
 ---
 
 ## Screenshots
+
+Fresh Otoha screenshots are pending. The images below show **upstream Verdant**, not Otoha’s
+current colors or added controls.
+
+<details>
+<summary>Upstream Verdant screenshots — reference only</summary>
+
+<img src="docs/images/home.png" alt="Upstream Verdant Home reference" width="900">
 
 <table>
 <tr>
@@ -275,6 +288,8 @@ See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional de
 <td><img src="docs/images/playlist-empty-rename.png" alt="Empty playlist and rename dialog"><br><sub><b>Editing</b></sub></td>
 </tr>
 </table>
+
+</details>
 
 ---
 
@@ -301,7 +316,7 @@ See [keyboard reference](theme/verdant/KEYBOARD_SHORTCUTS.txt) for additional de
 
 ## Install
 
-### Use this personal fork
+### Install Otoha from source
 
 Upstream release ZIPs install the original theme. To use these customizations, first set up an
 upstream Verdant installation using the instructions below, then use the `personal` branch of this
@@ -355,7 +370,7 @@ Run `uninstall.ps1` from `<profile>\verdant-backup\<date>\`, then delete `<profi
 
 ## First run
 
-> **Home and All Songs look empty?** Verdant reads foobar's **Media Library**, not your playlists. A
+> **Home and All Songs look empty?** Otoha reads foobar's **Media Library**, not your playlists. A
 > fresh foobar has an empty library, so add a music folder under Preferences → **Media Library**.
 > That's expected, not a broken install.
 
@@ -435,9 +450,9 @@ foobar's own *ReplayGain → Remove ReplayGain information from files*.
 ## FAQ
 
 **Is this a theme or a skin?** Both words get used for the same thing in the foobar2000 world.
-Verdant is a full visual replacement — layout, colours, fonts, every control — not a colour tweak.
+Otoha is a full visual replacement — layout, colours, fonts, every control — not a colour tweak.
 
-**Will it change how my music sounds?** No. Verdant is purely visual. The one exception is
+**Will it change how my music sounds?** Otoha uses foobar2000's playback engine. The optional
 *Normalize volume*, which you have to switch on yourself and which uses foobar2000's own ReplayGain.
 
 **Does it work with foobar2000 v1.x?** No — v2, 64-bit only.
@@ -518,14 +533,18 @@ load edited script files.
 
 ## Credits
 
-Built by **[superziper](https://github.com/superziper)**.
+Otoha is customized and maintained by **[cliffhuang0611](https://github.com/cliffhuang0611)**.
+
+Based on **[Verdant](https://github.com/superziper/verdant-foobar2000-theme)**, originally built by
+**[superziper](https://github.com/superziper)**. The original copyright and MIT license are preserved.
 
 Standing on: [Columns UI](https://github.com/reupen/columns_ui) by Reupen Shah, **JSplitter** by LUR,
 and [UI Wizard](https://github.com/The-Wizardium/UI-Wizard) by The Wizardium.
 
 ## Licence
 
-Verdant is [MIT licensed](LICENSE) — its own code is everything under `theme/`, `tools/`,
+Otoha’s theme code is [MIT licensed](LICENSE), retaining Verdant’s original notice. This covers
+the theme’s own work under `theme/`, `tools/`,
 `dist-config/` and `docs/`.
 
 The three foobar2000 components bundled for the one-step install are **not** Verdant's work and keep
