@@ -40,26 +40,29 @@ you choose to search. It does not connect to Spotify.
 ## Install
 
 Otoha installs directly into **foobar2000 v2, 64-bit** on Windows 10 or 11.
-It uses **Columns UI** and **JSplitter**, included under `components/` in this repository.
+It uses **Columns UI** and **JSplitter**, included in the release ZIP.
 No Verdant installation, window-management component, extra fonts, or JavaScript build step is required.
 
-### Install manually
+### Install from a release ZIP
 
 1. Install [foobar2000](https://www.foobar2000.org/download), choosing **64-bit**.
    To test Otoha separately, choose **Portable installation** in a new folder.
-2. Download this repository’s `main` branch using **Code → Download ZIP** and extract it.
+2. Open the [latest Otoha release](https://github.com/cliffhuang0611/otoha-foobar2000-theme/releases/latest).
+   Under **Assets**, download **`Otoha-vX.Y.Z.zip`** and extract it. Choose the named Otoha ZIP,
+   rather than GitHub’s automatically generated **Source code** archives.
 3. Close foobar2000. Find its **profile folder**:
    - Standard installation: `%APPDATA%\foobar2000-v2\`.
    - Portable installation: `<foobar2000 folder>\profile\`.
    Back up that folder before changing an existing setup.
-4. Copy the component folders from `components/` into `<profile>\user-components-x64\`.
+4. Copy the component folders from the extracted ZIP’s **`profile/user-components-x64/`** into
+   `<profile>\user-components-x64\`.
    Keep any existing installations of Columns UI or JSplitter rather than replacing them.
-5. Copy **the contents of `theme/otoha/`** into `<profile>\otoha\`.
+5. Copy **the contents of the extracted ZIP’s `profile/otoha/`** into `<profile>\otoha\`.
 6. Start foobar2000 and select **Columns UI** when asked. If needed, select it under
    Preferences → Display and restart.
 7. Open Preferences → Display → Columns UI and click **Import configuration**.
-   Import **`dist-config\otoha-layout.fcl`**, selecting its **Main Layout**, **Toolbar Layout**,
-   and **Misc Layout** entries where offered. Release packages put the FCL in `extras/`.
+   Import **`extras\otoha-layout.fcl`** from the extracted ZIP, selecting its **Main Layout**,
+   **Toolbar Layout**, and **Misc Layout** entries where offered.
 8. Apply the changes. If JSplitter cannot find the script, right-click its panel → **Configure**
    and set the profile-relative file path to **`otoha\main.js`**, then reload.
 9. Add your music folders under Preferences → **Media Library**.
@@ -69,10 +72,18 @@ profile.** Let your own foobar2000 installation create its configuration.
 For an existing Columns UI setup, export your current configuration before importing Otoha so
 that you can restore your preferred layout later.
 
+### Installing from source
+
+If you are developing Otoha or testing unreleased changes, download or clone this repository.
+Follow the release installation steps above, using `components/` instead of
+`profile/user-components-x64/`, `theme/otoha/` instead of `profile/otoha/`, and
+`dist-config/otoha-layout.fcl` instead of `extras/otoha-layout.fcl`.
+
 ### Updating Otoha
 
-Close foobar2000 and back up `<profile>\otoha\`, then replace its contents with the latest
-`theme/otoha/` files. Keep your existing layout, panel properties, and profile configuration.
+Download and extract the latest release ZIP. Close foobar2000 and back up `<profile>\otoha\`,
+then replace its contents with the ZIP’s **`profile/otoha/`** files. Keep your existing layout,
+panel properties, and profile configuration.
 Start foobar2000 again. No component reinstall or layout import is needed for ordinary script updates.
 
 ### Switching from an earlier Verdant-based setup
@@ -122,7 +133,8 @@ Deleting playlists does not require deleting their music files.
 Columns UI’s **Quick setup** as described above. The message about `otoha\main.js` means the
 saved layout points to a missing script; it does not mean the whole foobar2000 installation is corrupt.
 
-To reinstall, copy `theme/otoha/` into the profile again and import `otoha-layout.fcl`.
+To reinstall, copy the release ZIP’s `profile/otoha/` into your profile’s `otoha` folder again
+and import `extras/otoha-layout.fcl`.
 You do not need to reinstall components that are still present.
 Optional installer backups are disabled by default. To request them, run:
 
