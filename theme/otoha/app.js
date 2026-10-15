@@ -363,6 +363,7 @@ function on_paint(gr){
     drawQueueToggle(gr);
     drawBar(gr);
     drawOverlays(gr);
+    drawPlaylistInsertionMarker(gr);
     drawPlaylistDropHighlight(gr);
     drawQueueDragPreview(gr);
     return;
@@ -378,6 +379,7 @@ function on_paint(gr){
 }
 
 function drawMain(gr){
+  playlistDropView=null;
   navObserveView();
   HB_CARD=[]; HB_TR=[]; SB=null; SBH=null;   // clear stale click targets from the previous view
   if(view!=='songs'){ HB_SG=null; SG_HB=[]; HB_RGNORM=null; }
@@ -1149,6 +1151,7 @@ function navRestore(s){
 }
 function navTravel(delta){
   // A currently pending navigation may not yet have painted. Capture it first.
+  playlistDropView=null;
   navObserveView();
   var next=navPos+delta;
   if(next<0 || next>=navPages.length)return false;

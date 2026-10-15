@@ -23,7 +23,7 @@
 
 // the key is `features`, not `options` -- without features.drag_n_drop the panel is never
 // registered as an OLE drop target, so no on_drag_* fires
-var OTOHA_VERSION='1.0.0';
+var OTOHA_VERSION='1.1.0';
 window.DefineScript('Otoha', { author:'cliffhuang0611 (based on Verdant by superziper)', version:OTOHA_VERSION, features:{ drag_n_drop:true, grab_focus:true } });
 var DLGC_WANTALLKEYS=0x0004;   // capture Ctrl+F and text editing from every view (see applyKeyMode)
 
@@ -68,6 +68,7 @@ include('views/songs.js');
 include('views/search.js');
 include('views/queue.js');
 include('views/queue_edit.js');
+include('views/playlist_drag.js');
 include('views/bar.js');
 include('views/fullscreen.js');
 

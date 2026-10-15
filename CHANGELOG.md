@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- Add drag-and-drop reordering of playlist tracks in Sort: Default.
+- Move multiple selected tracks together, with an insertion marker and edge scrolling.
+- Preserve duplicate entries and use native playlist moves without restarting playback.
+- Disable internal reordering for sorted, filtered, and read-only playlists.
+- Document saving the updated stored playlist order to M3U8 through Save playlist.
+
 ## 1.0.0
 
 First Otoha release, based on Verdant by superziper.

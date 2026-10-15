@@ -173,6 +173,10 @@ Otoha installs independently; a Verdant installation is not required.
   disabled for Default; the previous direction is remembered for named sorts.
   **Apply displayed sort to playlist** writes the full displayed sort into the stored playlist
   order, including tracks hidden by a filter, and switches the view back to Default.
+- **Drag to reorder playlist tracks** in **Sort: Default**, with an insertion marker and edge
+  scrolling. Selected tracks move together in their existing order. Sorting by another field,
+  filtering, or a read-only playlist disables internal reordering. This changes foobar2000’s
+  stored playlist order; use **Save playlist** to export it to an M3U8 file.
 - **Windows-style track selection**: Ctrl-click toggles individual tracks; Shift-click selects ranges;
   Ctrl+Shift-click adds ranges. Arrow-key selection uses the current displayed order. Duplicate
   entries can be selected independently. Modified double-clicks do not start playback.

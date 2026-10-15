@@ -82,27 +82,28 @@ function queueDragTargetAt(x,y){
 }
 function beginMainQueueDrag(row,x,y,mask){
   var mods=mouseSelectionModifiers(mask),h=trackHandle(row);if(!h||mods.ctrl||mods.shift)return;
-  var entries=isTrackSelected(row)?selectedTrackEntries():[{handle:h}];
-  mainQueueDrag={x:x,y:y,moved:false,handles:entries.map(function(e){return e.handle;})};
+  var entries=isTrackSelected(row)?selectedTrackEntries():[{row:row,handle:h}];
+  mainQueueDrag={x:x,y:y,moved:false,reorder:playlistReorderSource(row,entries),handles:entries.map(function(e){return e.handle;})};
 }
 function updateMainQueueDrag(x,y){
   var d=mainQueueDrag;if(!d)return;
   if(!d.moved&&Math.abs(x-d.x)+Math.abs(y-d.y)<6)return;
   d.moved=true;drag='trackqueue';queueInsertMarker=queueInsertionAt(x,y);
   var playlistTarget=trackPlaylistDropTarget(x,y);navDropHover=!!(playlistTarget&&playlistTarget.create);
-  trackQueueEdgeScroll(x,y);repaintQueue();
+  trackQueueEdgeScroll(x,y);trackPlaylistDragScroll();repaintQueue();
 }
 function finishMainQueueDrag(x,y){
-  var d=mainQueueDrag;mainQueueDrag=null;queueInsertMarker=null;navDropHover=false;stopQueueEdgeScroll();
+  var d=mainQueueDrag,reorderTarget=playlistInsertionAt(x,y);mainQueueDrag=null;queueInsertMarker=null;navDropHover=false;stopQueueEdgeScroll();stopPlaylistDragScroll();
   if(!d||!d.moved)return false;
   drag=null;var target=queueInsertionAt(x,y);
   var playlistTarget=trackPlaylistDropTarget(x,y);
   if(target)insertQueueTracks(d.handles,target.index);
   else if(playlistTarget)appendDraggedTracks(playlistTarget,d.handles);
+  else if(reorderTarget)reorderDraggedPlaylist(d.reorder,reorderTarget.index);
   else repaintAll();
   return true;
 }
-function cancelMainQueueDrag(){mainQueueDrag=null;queueInsertMarker=null;navDropHover=false;if(drag==='trackqueue')drag=null;stopQueueEdgeScroll();repaintAll();}
+function cancelMainQueueDrag(){stopPlaylistDragScroll();mainQueueDrag=null;queueInsertMarker=null;navDropHover=false;if(drag==='trackqueue')drag=null;stopQueueEdgeScroll();repaintAll();}
 function trackPlaylistDropTarget(x,y){
   if(fsMode)return null;
   if(HB_ADDPL&&inRect(x,y,HB_ADDPL))return {create:true,rect:HB_ADDPL};
@@ -160,6 +161,8 @@ function drawQueueDragPreview(gr){
   }
   var target=trackPlaylistDropTarget(mx,my),label;
   if(target)label=target.disabled?'Playlist is read-only':target.create?'Create playlist with '+handles.length+' track'+(handles.length===1?'':'s'):'Append to '+plman.GetPlaylistName(target.pl);
+  else if(adding&&playlistInsertionAt(mx,my))label='Move '+handles.length+' track'+(handles.length===1?'':'s')+' in playlist';
+  else if(adding&&d.reorder&&playlistDropView&&mx>=playlistDropView.x0&&mx<playlistDropView.x1)label='Drop between playlist tracks to reorder';
   else label=adding?'Add '+handles.length+' track'+(handles.length===1?'':'s')+' to Play order':handles.length>1?'Move '+handles.length+' tracks in Play order':'Move in Play order';
   tL(gr,label,FONT.plSub,target&&target.disabled?COL.text3:COL.accent,multi?x+12:tx,y+height-28,multi?w-24:tw,18);
 }

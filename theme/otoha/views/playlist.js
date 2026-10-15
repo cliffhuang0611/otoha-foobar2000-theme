@@ -52,6 +52,7 @@ function drawPlaylist(gr,r){
   var visibleCount=order.length;
   var contentH=visibleCount*rh, maxPx=Math.max(0,contentH-viewH);   // firstRow is a PIXEL offset
   PL_MAXPX=maxPx;
+  playlistDropView={pl:p.i,x0:lx-8,x1:rx+6,y0:rowsTop,y1:cropY,rh:rh,count:visibleCount};
   firstRow=clampPx(firstRow,maxPx); firstRowT=clampPx(firstRowT,maxPx);
   var loc=playingLoc();
   var items=getItems(p.i), meta=getMeta(p.i), shufHere=npIsShuffleOf(p.name);
