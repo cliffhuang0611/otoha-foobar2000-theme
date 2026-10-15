@@ -46,6 +46,7 @@ function drawNav(gr){
   var listTop=pinY+pinH+10, rh=58, cropY=footTop-6, viewH=cropY-listTop;
   var contentH=pls.length*rh, maxPx=Math.max(0,contentH-viewH);
   NAV_MAX=maxPx;
+  sidebarPlaylistViewport={x0:R.navLib.x,y0:listTop,x1:R.navLib.x+R.navLib.w-12,y1:cropY,rh:rh,playlists:pls.slice()};
   navScroll=clampPx(navScroll,maxPx); navScrollT=clampPx(navScrollT,maxPx);
   // honour a pending "scroll this playlist into view" request now that the row geometry is known
   if(navRevealPl>=0){

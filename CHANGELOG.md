@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Add drag-and-drop reordering of sidebar playlists, with an insertion marker, drag preview, and edge scrolling.
+- Save the native playlist order and use the same order for Home playlist cards, keeping All Songs pinned.
+- Keep playback references and navigation history aligned when playlist indexes change.
+
 ## 1.1.0
 
 - Add drag-and-drop reordering of playlist tracks in Sort: Default.

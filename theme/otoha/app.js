@@ -349,7 +349,7 @@ function on_paint(gr){
   // A partial paint skips drawOverlays, so a modal's dim backdrop would not be reapplied over the
   // region it redraws (the bar's 1 Hz repaint would flash back to full brightness). While an
   // overlay owns the screen, every paint takes the full path.
-  var modal=(mainQueueDrag&&mainQueueDrag.moved)||(queueDrag&&queueDrag.moved)||lyDialog||renameEdit||ctxMenu||confirmDel||dupPrompt||rgPrompt||audioPopup||plSortMenuOpen||sgMenuOpen||rgTipShown;
+  var modal=(sidebarPlaylistDrag&&sidebarPlaylistDrag.moved)||(mainQueueDrag&&mainQueueDrag.moved)||(queueDrag&&queueDrag.moved)||lyDialog||renameEdit||ctxMenu||confirmDel||dupPrompt||rgPrompt||audioPopup||plSortMenuOpen||sgMenuOpen||rgTipShown;
   if(dirtyAll || !anyPartial || modal || stale){ // full paint, or an OS/stale paint we can't scope
     clearDirty();
     HB_DOTS=[];
@@ -366,6 +366,7 @@ function on_paint(gr){
     drawPlaylistInsertionMarker(gr);
     drawPlaylistDropHighlight(gr);
     drawQueueDragPreview(gr);
+    drawSidebarPlaylistDrag(gr);
     return;
   }
   // partial composite: only the regions actually flagged (each drawn over live content)
@@ -409,6 +410,7 @@ function dismissTransientMenus(){
   repaintAll();
 }
 function on_focus(is_focused){
+  if(!is_focused&&sidebarPlaylistDrag)cancelSidebarPlaylistDrag();
   if(!is_focused&&mainQueueDrag)cancelMainQueueDrag();
   if(!is_focused)pointerDown=false;
   if(!is_focused){stopQueueEdgeScroll();if(queueDrag){queueDrag=null;if(drag==='queue')drag=null;}dismissTransientMenus();}
@@ -447,6 +449,8 @@ function on_mouse_lbtn_down(x,y,mask){
   if(SBH && inRect(x,y,SBH)){ drag='scrollh'; setScrollH(x); return; }
   if(SBN && inRect(x,y,SBN)){ drag='scrolln'; setScrollN(y); return; }
   if(SB && inRect(x,y,SB)){ drag='scroll'; setScroll(y); return; }
+  var sidebarRow=hit(HB_PL,x,y);
+  if(sidebarRow&&!hit(HB_DOTS,x,y)){beginSidebarPlaylistDrag(sidebarRow,x,y);return;}
   var mainRow=hit(HB_TR,x,y);if(mainRow)beginMainQueueDrag(mainRow,x,y,mask);
 }
 function on_mouse_rbtn_up(x,y){
@@ -614,6 +618,7 @@ function on_mouse_lbtn_up(x,y,mask){
   pointerDown=false;repaintAll();
   if(lyDialogDoubleClickUp){lyDialogDoubleClickUp=false;trackClickModifiers=null;return;}
   if(lyDialog){lyricDialogClick(x,y);return;}
+  if(sidebarPlaylistDrag&&finishSidebarPlaylistDrag(x,y))return;
   if(mainQueueDrag&&finishMainQueueDrag(x,y))return;
   var clickModifiers=trackClickModifiers||mouseSelectionModifiers(mask);
   trackClickModifiers=null;
@@ -864,6 +869,7 @@ function hoverSig(x,y){
 function on_mouse_move(x,y){
   mx=x; my=y;
   if(lyDialog){clearPlaylistNameTooltip();repaintAll();return;}
+  if(sidebarPlaylistDrag){updateSidebarPlaylistDrag(x,y);if(sidebarPlaylistDrag.moved)return;}
   if(mainQueueDrag){updateMainQueueDrag(x,y);if(mainQueueDrag.moved)return;}
   if(drag==='scrollq'){setQueueScroll(y);return;}
   if(queueDrag){updateQueueDrag(x,y);return;}
@@ -914,6 +920,7 @@ function scrollSection(x,y){
 }
 function on_mouse_leave(){
   if(queueDrag&&queueDrag.moved)repaintAll();
+  if(sidebarPlaylistDrag)cancelSidebarPlaylistDrag();
   if(mainQueueDrag)cancelMainQueueDrag();
   pointerDown=false;
   stopQueueEdgeScroll();
@@ -1278,6 +1285,7 @@ function keyboardAction(action){
   return false;
 }
 function on_key_down(vkey){
+  if(vkey===27&&sidebarPlaylistDrag){cancelSidebarPlaylistDrag();return;}
   if(vkey===27&&mainQueueDrag){cancelMainQueueDrag();return;}
   if(vkey===27&&queueDrag){stopQueueEdgeScroll();queueDrag=null;if(drag==='queue')drag=null;repaintAll();return;}
   var ctrl=false,shift=false,alt=false;
@@ -1490,6 +1498,7 @@ function on_drag_drop(action,x,y,mask){
   navDropHover=false; plDropHover=false; repaintAll();
 }
 function on_script_unload(){
+  if(sidebarPlaylistDrag)cancelSidebarPlaylistDrag();
   if(mainQueueDrag)cancelMainQueueDrag();
   if(retainedOrderTimer!==null){window.ClearTimeout(retainedOrderTimer);retainedOrderTimer=null;}
   persistQueueState();

@@ -180,6 +180,10 @@ Otoha installs independently; a Verdant installation is not required.
 
 ### Playlists and track selection
 
+- **Drag sidebar playlists to reorder them**, with insertion feedback and edge scrolling.
+  The native playlist order is saved by foobar2000 and also controls the Home playlist shelf.
+  **All Songs** remains pinned. Reordering a playlist does not change its tracks.
+
 - **Default sorting preserves foobar2000's stored playlist order**, including imported M3U8 order.
   Title/Artist/Album sorting changes the display only. The direction button keeps its space but is
   disabled for Default; the previous direction is remembered for named sorts.
